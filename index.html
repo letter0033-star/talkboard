@@ -162,6 +162,7 @@
         meetingName: "제5차 교원인사자문위원회 회의",
         meetingPurpose: "2026학년도 부서배정 및 신규임용 교사 업무분장, 학교폭력 유공교원 가산점 심사",
         dateTime: "2026년 11월 25일(수) 15:30",
+        writtenDate: "2026년 11월 25일",
         location: "늘푸른초등학교 교무실",
         attendees: "위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)",
         externalAttendees: "이영희(학교운영위원장), 박진아(학부모회장)",
@@ -203,6 +204,7 @@
         meetingName: "2026학년도 제2학기 학업성적관리 및 교육과정 운영 교무위원회",
         meetingPurpose: "2학기 과정중심 학생평가 계획 심의, 늘봄학교 운영 및 특기적성 부서 확정, 학교생활규정(교외체험학습 규정 등) 개정",
         dateTime: "2026년 9월 8일(화) 16:00",
+        writtenDate: "2026년 09월 08일",
         location: "미래초등학교 2층 회의실",
         attendees: "교감 박혜원, 교육과정부장 정민호, 평가계 이수진, 교사 강동우, 간사 김세영",
         externalAttendees: "장지현(학교운영위원회 학부모위원)",
@@ -245,6 +247,7 @@
         meetingName: "2026년도 제3회 지방공무원 인사위원회",
         meetingPurpose: "2026학년도 하반기 지방공무원 승진 임용 적격 성향 심사 및 의무 위반자 징계 양정 의결 심의",
         dateTime: "2026년 6월 12일(금) 14:00",
+        writtenDate: "2026년 06월 12일",
         location: "서울특별시교육청 4층 소회의실",
         attendees: "위원 이현우(과장), 위원 김미경(인사과장), 위원 정은주(외부 변호사), 간사 박성태(사무관)",
         externalAttendees: "백승태(지방대학 법학전문교수)",
@@ -281,6 +284,26 @@
       }
     };
 
+    const getCurrentDateTimeString = () => {
+      const d = new Date();
+      const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const date = String(d.getDate()).padStart(2, '0');
+      const day = weekDays[d.getDay()];
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}년 ${month}월 ${date}일(${day}) ${hours}:${minutes}`;
+    };
+
+    const getCurrentDateString = () => {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const date = String(d.getDate()).padStart(2, '0');
+      return `${year}년 ${month}월 ${date}일`;
+    };
+
     function App() {
       const [user, setUser] = useState(null);
 
@@ -301,21 +324,22 @@
       };
 
       // Core Form States
-      const [orgType, setOrgType] = useState('교육기관');
-      const [orgName, setOrgName] = useState('늘푸른초등학교');
-      const [chairperson, setChairperson] = useState('교감 김지훈');
-      const [meetingName, setMeetingName] = useState('제5차 교원인사자문위원회 회의');
-      const [meetingPurpose, setMeetingPurpose] = useState('2026학년도 부서배정 및 신규임용 교사 업무분장, 학교폭력 유공교원 가산점 심사');
-      const [dateTime, setDateTime] = useState('2026년 11월 25일(수) 15:30');
-      const [location, setLocation] = useState('늘푸른초등학교 교무실');
-      const [attendees, setAttendees] = useState('위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)');
-      const [externalAttendees, setExternalAttendees] = useState('이영희(학교운영위원장), 박진아(학부모회장)');
-      const [department, setDepartment] = useState('교무기획부');
-      const [meetingType, setMeetingType] = useState('임시');
+      const [orgType, setOrgType] = useState(() => safeGetLocalItem('local_minutes_org_type') || '교육기관');
+      const [orgName, setOrgName] = useState(() => safeGetLocalItem('local_minutes_org_name') || '늘푸른초등학교');
+      const [chairperson, setChairperson] = useState(() => safeGetLocalItem('local_minutes_chairperson') || '교감 김지훈');
+      const [meetingName, setMeetingName] = useState(() => safeGetLocalItem('local_minutes_meeting_name') || '제5차 교원인사자문위원회 회의');
+      const [meetingPurpose, setMeetingPurpose] = useState(() => safeGetLocalItem('local_minutes_meeting_purpose') || '2026학년도 부서배정 및 신규임용 교사 업무분장, 학교폭력 유공교원 가산점 심사');
+      const [dateTime, setDateTime] = useState(() => safeGetLocalItem('local_minutes_date_time') || getCurrentDateTimeString());
+      const [location, setLocation] = useState(() => safeGetLocalItem('local_minutes_location') || '늘푸른초등학교 교무실');
+      const [attendees, setAttendees] = useState(() => safeGetLocalItem('local_minutes_attendees') || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)');
+      const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem('local_minutes_external_attendees') || '이영희(학교운영위원장), 박진아(학부모회장)');
+      const [department, setDepartment] = useState(() => safeGetLocalItem('local_minutes_department') || '교무기획부');
+      const [meetingType, setMeetingType] = useState(() => safeGetLocalItem('local_minutes_meeting_type') || '임시');
       const [writingMethod, setWritingMethod] = useState('conversational');
       const [rawTranscript, setRawTranscript] = useState('');
+      const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem('local_minutes_written_date') || getCurrentDateString());
 
-      const [isRemembered, setIsRemembered] = useState(false);
+      const [isRemembered, setIsRemembered] = useState(() => safeGetLocalItem('local_minutes_saved') === 'true');
       const [isSaving, setIsSaving] = useState(false);
 
       // Lists State
@@ -422,60 +446,57 @@
         return () => unsubscribe();
       }, []);
 
-      // --- PERSISTENCE: CLOUD SYNC READ ---
+      // --- PERSISTENCE: LOCAL STORAGE INITIAL LOAD ---
       useEffect(() => {
-        if (!user) return;
-        const settingsDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('profile');
-        
-        const unsubscribe = settingsDocRef.onSnapshot((docSnap) => {
-          if (docSnap.exists) {
-            const data = docSnap.data();
-            if (data.isRemembered) {
-              setIsRemembered(true);
-              if (data.orgType) setOrgType(data.orgType);
-              if (data.orgName) setOrgName(data.orgName);
-              if (data.chairperson !== undefined) setChairperson(data.chairperson);
-              if (data.attendees) setAttendees(data.attendees);
-              if (data.externalAttendees !== undefined) setExternalAttendees(data.externalAttendees);
-              if (data.isActionNA !== undefined) setIsActionNA(data.isActionNA);
-            }
-          } else {
-            loadTemplate('edu_committee');
-          }
-        }, (error) => {
-          console.warn("Firestore settings read failed. Using local state setup.", error);
-        });
+        const hasSaved = safeGetLocalItem('local_minutes_saved') === 'true';
+        if (!hasSaved) {
+          loadTemplate('edu_committee');
+        }
+      }, []);
 
-        return () => unsubscribe();
-      }, [user]);
+      const saveBasicInfoToLocal = () => {
+        try {
+          localStorage.setItem('local_minutes_saved', 'true');
+          localStorage.setItem('local_minutes_org_type', orgType);
+          localStorage.setItem('local_minutes_org_name', orgName);
+          localStorage.setItem('local_minutes_chairperson', chairperson);
+          localStorage.setItem('local_minutes_attendees', attendees);
+          localStorage.setItem('local_minutes_external_attendees', externalAttendees);
+          localStorage.setItem('local_minutes_meeting_name', meetingName);
+          localStorage.setItem('local_minutes_meeting_purpose', meetingPurpose);
+          localStorage.setItem('local_minutes_date_time', dateTime);
+          localStorage.setItem('local_minutes_location', location);
+          localStorage.setItem('local_minutes_department', department);
+          localStorage.setItem('local_minutes_meeting_type', meetingType);
+          localStorage.setItem('local_minutes_written_date', writtenDate);
+          setIsRemembered(true);
+          showToastMsg('기본 정보 및 회의 사항이 PC(로컬 저장소)에 안전하게 저장되었습니다.', 'success');
+        } catch (e) {
+          showToastMsg('기본 정보 저장에 실패했습니다.', 'error');
+        }
+      };
 
-      // --- PERSISTENCE: DEBOUNCED CLOUD SAVE ---
-      useEffect(() => {
-        if (!user) return;
-
-        const settingsDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('profile');
-        setIsSaving(true);
-
-        const debounceTimer = setTimeout(() => {
-          settingsDocRef.set({
-            isRemembered,
-            orgType: isRemembered ? orgType : "",
-            orgName: isRemembered ? orgName : "",
-            chairperson: isRemembered ? chairperson : "",
-            attendees: isRemembered ? attendees : "",
-            externalAttendees: isRemembered ? externalAttendees : "",
-            isActionNA: isRemembered ? isActionNA : false,
-            updatedAt: new Date().toISOString()
-          }, { merge: true })
-          .then(() => setIsSaving(false))
-          .catch((err) => {
-            console.warn("Firestore autosave sync failed:", err);
-            setIsSaving(false);
-          });
-        }, 800);
-
-        return () => clearTimeout(debounceTimer);
-      }, [user, isRemembered, orgType, orgName, chairperson, attendees, externalAttendees, isActionNA]);
+      const clearBasicInfoFromLocal = () => {
+        try {
+          localStorage.removeItem('local_minutes_saved');
+          localStorage.removeItem('local_minutes_org_type');
+          localStorage.removeItem('local_minutes_org_name');
+          localStorage.removeItem('local_minutes_chairperson');
+          localStorage.removeItem('local_minutes_attendees');
+          localStorage.removeItem('local_minutes_external_attendees');
+          localStorage.removeItem('local_minutes_meeting_name');
+          localStorage.removeItem('local_minutes_meeting_purpose');
+          localStorage.removeItem('local_minutes_date_time');
+          localStorage.removeItem('local_minutes_location');
+          localStorage.removeItem('local_minutes_department');
+          localStorage.removeItem('local_minutes_meeting_type');
+          localStorage.removeItem('local_minutes_written_date');
+          setIsRemembered(false);
+          showToastMsg('저장된 기본 정보 및 회의 사항이 PC에서 삭제되었습니다.', 'success');
+        } catch (e) {
+          showToastMsg('기본 정보 삭제에 실패했습니다.', 'error');
+        }
+      };
 
       const loadTemplate = (key) => {
         const t = MEETING_TEMPLATES[key];
@@ -486,13 +507,14 @@
             setChairperson(t.chairperson);
             setAttendees(t.attendees);
             setExternalAttendees(t.externalAttendees || "");
+            setMeetingName(t.meetingName);
+            setMeetingPurpose(t.meetingPurpose);
+            setDateTime(getCurrentDateTimeString());
+            setLocation(t.location);
+            setDepartment(t.department);
+            setMeetingType(t.meetingType);
+            setWrittenDate(getCurrentDateString());
           }
-          setMeetingName(t.meetingName);
-          setMeetingPurpose(t.meetingPurpose);
-          setDateTime(t.dateTime);
-          setLocation(t.location);
-          setDepartment(t.department);
-          setMeetingType(t.meetingType);
           setAgendas(t.agendas);
           setDecisions(t.decisions);
           setWritingMethod(t.writingMethod);
@@ -804,7 +826,7 @@ ${isActionNA ? "  해당사항 없음 (추진 과제 및 계획 없음)" : futur
 
 =============================================
 상기 기록이 틀림없음을 확인하며, 이에 서명함.
-${dateTime.split(' ')[0]}
+${writtenDate}
 위원장 : ${chairperson}  (인)
 간  사 :                       (인)
 =============================================
@@ -909,18 +931,30 @@ ${dateTime.split(' ')[0]}
                           <History size={18} />
                         </div>
                         <div>
-                          <h3 className="text-xs font-bold text-slate-800">기본 정보 클라우드 동기화</h3>
-                          <p className="text-[10px] text-slate-500 leading-normal mt-0.5">기관 명칭과 출석 위원을 Cloud에 보관합니다.</p>
+                          <h3 className="text-xs font-bold text-slate-800">기본 정보 PC에 저장</h3>
+                          <p className="text-[10px] text-slate-500 leading-normal mt-0.5">기관 정보와 회의 기본사항을 PC(브라우저)에 보관합니다.</p>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <label className="relative inline-flex items-center cursor-pointer select-none">
-                          <input type="checkbox" checked={isRemembered} onChange={(e) => setIsRemembered(e.target.checked)} className="sr-only peer" />
-                          <div className="w-8 h-4.5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-indigo-600 relative transition-all"></div>
-                        </label>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <div className="flex gap-1.5">
+                          {isRemembered && (
+                            <button
+                              onClick={clearBasicInfoFromLocal}
+                              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-[10px] font-bold shadow-sm transition-all active:scale-[0.97]"
+                            >
+                              지우기
+                            </button>
+                          )}
+                          <button
+                            onClick={saveBasicInfoToLocal}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold shadow-sm transition-all active:scale-[0.97] flex items-center gap-1"
+                          >
+                            기억하기
+                          </button>
+                        </div>
                         {isRemembered && (
-                          <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-1">
-                            {isSaving ? "동기화 중..." : "동기화 설정됨"}
+                          <span className="text-[9px] font-bold text-emerald-600">
+                            PC에 저장됨
                           </span>
                         )}
                       </div>
@@ -1198,6 +1232,17 @@ ${dateTime.split(' ')[0]}
                       ></textarea>
                     </div>
 
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1">회의록 작성일</label>
+                      <input
+                        type="text"
+                        value={writtenDate}
+                        onChange={(e) => setWrittenDate(e.target.value)}
+                        placeholder="예: 2026년 06월 13일"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold"
+                      />
+                    </div>
+
                     {errorMessage && (
                       <div className="p-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-xs font-medium leading-normal flex gap-2">
                         <AlertTriangle size={16} className="shrink-0 mt-0.5" />
@@ -1285,7 +1330,7 @@ ${dateTime.split(' ')[0]}
                     {/* Document Header */}
                     <div className="text-center mb-8 relative">
                       <div className="text-[10px] tracking-wider text-slate-400 font-bold border border-slate-200 inline-block px-3 py-0.5 rounded-full mb-4 print:hidden">공공 보존 공문서 표준 서식</div>
-                      <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-[0.2em] uppercase mb-1">{orgName} 회의록</h1>
+                      <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-[0.1em] uppercase mb-1">{meetingName}</h1>
                       <div className="h-0.5 bg-slate-900 w-16 mx-auto mt-3"></div>
                     </div>
 
@@ -1405,7 +1450,7 @@ ${dateTime.split(' ')[0]}
                     <div className="border-t border-slate-300 pt-8 mt-12 flex flex-col items-center">
                       <p className="text-xs md:text-sm text-slate-600 font-bold mb-6">상기 회의록 기록 내용이 사실과 다름없음을 보증 및 확인함.</p>
                       
-                      <div className="text-xs text-slate-500 font-black tracking-widest mb-10">{dateTime.split(' ')[0] || ''}</div>
+                      <div className="text-xs text-slate-500 font-black tracking-widest mb-10">{writtenDate}</div>
                       
                       <div className="flex flex-col sm:flex-row gap-8 sm:gap-24 items-center justify-center w-full">
                         <div className="flex items-center gap-1.5 relative">
