@@ -69,6 +69,14 @@
         display: block !important;
         position: static !important;
       }
+
+      /* Preserves flex/grid layouts during print */
+      .print-grid {
+        display: grid !important;
+      }
+      .print-flex {
+        display: flex !important;
+      }
       
       body {
         background-color: white !important;
@@ -305,6 +313,76 @@
       return `${year}년 ${month}월 ${date}일`;
     };
 
+    const getSecretaryName = (text) => {
+      if (!text) return '정선아';
+      const parts = text.split(',');
+      for (let part of parts) {
+        let clean = part.trim();
+        if (clean.includes('간사')) {
+          clean = clean.replace(/\(.*?\)/g, '').trim();
+          const tokens = clean.split(/\s+/);
+          return tokens[tokens.length - 1] || '정선아';
+        }
+      }
+      return '정선아';
+    };
+
+    const getChairpersonName = (text) => {
+      if (!text) return '';
+      let clean = text.trim();
+      clean = clean.replace(/\(.*?\)/g, '').trim();
+      const tokens = clean.split(/\s+/);
+      return tokens[tokens.length - 1] || '';
+    };
+
+    const parseSingleAttendeeToSignature = (text) => {
+      if (!text) return '';
+      let clean = text.trim();
+      clean = clean.replace(/\(.*?\)/g, '').trim();
+      const tokens = clean.split(/\s+/);
+      const name = tokens[tokens.length - 1];
+      return name ? `${name}(인)` : '';
+    };
+
+    const formatChairpersonSignature = (chair) => {
+      if (!chair) return '위원장: (인)';
+      const clean = chair.trim();
+      if (clean.includes('위원장')) {
+        return `${clean} (인)`;
+      }
+      return `위원장: ${clean} (인)`;
+    };
+
+    const formatSecretarySignature = (atts) => {
+      const secName = getSecretaryName(atts);
+      return `간사: ${secName} (인)`;
+    };
+
+    const parseAttendeesToSignatures = (text, chairText) => {
+      if (!text) return '';
+      const chairName = getChairpersonName(chairText);
+      const parts = text.split(',');
+      const names = parts.map(part => {
+        let clean = part.trim();
+        if (!clean || clean.includes('간사')) return '';
+        clean = clean.replace(/\(.*?\)/g, '').trim();
+        const tokens = clean.split(/\s+/);
+        const name = tokens[tokens.length - 1];
+        if (chairName && name === chairName) return '';
+        return name ? `${name}(인)` : '';
+      }).filter(Boolean);
+      return names.join(', ');
+    };
+
+    const formatVotingResult = (decision) => {
+      if (!decision || typeof decision === 'string') return '';
+      const method = decision.votingMethod || '구두합의';
+      const resultStr = (decision.isUnanimous ?? true)
+        ? '만장일치 찬성'
+        : `찬성 ${decision.yesCount || 0}표, 반대 ${decision.noCount || 0}표, 기권 ${decision.abstainCount || 0}표`;
+      return `(의결 방식: ${method} / 결과: ${resultStr})`;
+    };
+
     function App() {
       const [user, setUser] = useState(null);
 
@@ -340,6 +418,20 @@
       const [rawTranscript, setRawTranscript] = useState('');
       const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem('local_minutes_written_date') || getCurrentDateString());
 
+      // Attendee signatures states
+      const [isSignaturesNA, setIsSignaturesNA] = useState(() => safeGetLocalItem('local_minutes_signatures_na') === 'true');
+      const [attendeeSignatures, setAttendeeSignatures] = useState(() => {
+        const saved = safeGetLocalItem('local_minutes_attendee_signatures');
+        if (saved) return saved;
+        const defaultAttendees = safeGetLocalItem('local_minutes_attendees') || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)';
+        const defaultChair = safeGetLocalItem('local_minutes_chairperson') || '교감 김지훈';
+        return parseAttendeesToSignatures(defaultAttendees, defaultChair);
+      });
+      const [isSignaturesAuto, setIsSignaturesAuto] = useState(() => {
+        const savedAuto = safeGetLocalItem('local_minutes_signatures_auto');
+        return savedAuto === '' ? true : savedAuto === 'true';
+      });
+
       const [isRemembered, setIsRemembered] = useState(() => safeGetLocalItem('local_minutes_saved') === 'true');
       const [isSaving, setIsSaving] = useState(false);
 
@@ -351,9 +443,9 @@
       ]);
 
       const [decisions, setDecisions] = useState([
-        '관내 전입 및 3년 이상 장기 근속 교사 대상 우선 선택권 보장 기준 확정',
-        '병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의',
-        '학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정'
+        { text: '관내 전입 및 3년 이상 장기 근속 교사 대상 우선 선택권 보장 기준 확정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
+        { text: '병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
+        { text: '학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 }
       ]);
 
       const [isActionNA, setIsActionNA] = useState(false);
@@ -455,6 +547,14 @@
         }
       }, []);
 
+      // Sync attendees to signatures if auto-sync is on (chairperson and secretary excluded)
+      useEffect(() => {
+        if (isSignaturesAuto && !isSignaturesNA) {
+          const parsedAtts = parseAttendeesToSignatures(attendees, chairperson);
+          setAttendeeSignatures(parsedAtts);
+        }
+      }, [chairperson, attendees, isSignaturesAuto, isSignaturesNA]);
+
       const saveBasicInfoToLocal = () => {
         try {
           localStorage.setItem('local_minutes_saved', 'true');
@@ -470,6 +570,11 @@
           localStorage.setItem('local_minutes_department', department);
           localStorage.setItem('local_minutes_meeting_type', meetingType);
           localStorage.setItem('local_minutes_written_date', writtenDate);
+          
+          localStorage.setItem('local_minutes_signatures_na', isSignaturesNA ? 'true' : 'false');
+          localStorage.setItem('local_minutes_attendee_signatures', attendeeSignatures);
+          localStorage.setItem('local_minutes_signatures_auto', isSignaturesAuto ? 'true' : 'false');
+
           setIsRemembered(true);
           showToastMsg('기본 정보 및 회의 사항이 PC(로컬 저장소)에 안전하게 저장되었습니다.', 'success');
         } catch (e) {
@@ -492,6 +597,16 @@
           localStorage.removeItem('local_minutes_department');
           localStorage.removeItem('local_minutes_meeting_type');
           localStorage.removeItem('local_minutes_written_date');
+
+          localStorage.removeItem('local_minutes_signatures_na');
+          localStorage.removeItem('local_minutes_attendee_signatures');
+          localStorage.removeItem('local_minutes_signatures_auto');
+
+          setIsSignaturesNA(false);
+          setIsSignaturesAuto(true);
+          const parsedAtts = parseAttendeesToSignatures(attendees, chairperson);
+          setAttendeeSignatures(parsedAtts);
+
           setIsRemembered(false);
           showToastMsg('저장된 기본 정보 및 회의 사항이 PC에서 삭제되었습니다.', 'success');
         } catch (e) {
@@ -517,7 +632,13 @@
             setWrittenDate(getCurrentDateString());
           }
           setAgendas(t.agendas);
-          setDecisions(t.decisions);
+          const mappedDecisions = (t.decisions || []).map(dec => {
+            if (typeof dec === 'string') {
+              return { text: dec, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+            }
+            return dec;
+          });
+          setDecisions(mappedDecisions);
           setWritingMethod(t.writingMethod);
           setIsActionNA(t.isActionNA || false);
           setFutureActions(t.futureActions);
@@ -525,6 +646,14 @@
           setGeneratedMinutes('');
           setErrorMessage('');
           setChatLog([]);
+
+          setIsSignaturesNA(false);
+          setIsSignaturesAuto(true);
+          const targetChairperson = isRemembered ? chairperson : t.chairperson;
+          const targetAttendees = isRemembered ? attendees : t.attendees;
+          const parsedAtts = parseAttendeesToSignatures(targetAttendees, targetChairperson);
+          setAttendeeSignatures(parsedAtts);
+
           showToastMsg(`'${t.title}' 실무 템플릿이 안전하게 구성되었습니다.`, 'success');
         }
       };
@@ -540,12 +669,28 @@
         setAgendas(agendas.filter((_, i) => i !== index));
       };
 
-      const handleDecisionChange = (index, value) => {
+      const handleDecisionTextChange = (index, value) => {
         const next = [...decisions];
-        next[index] = value;
+        if (typeof next[index] === 'string') {
+          next[index] = { text: value, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+        } else {
+          next[index] = { ...next[index], text: value };
+        }
         setDecisions(next);
       };
-      const addDecision = () => setDecisions([...decisions, '']);
+
+      const handleDecisionVotingChange = (index, field, value) => {
+        const next = [...decisions];
+        if (typeof next[index] === 'string') {
+          next[index] = { text: next[index], votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0, [field]: value };
+        } else {
+          next[index] = { ...next[index], [field]: value };
+        }
+        setDecisions(next);
+      };
+
+      const addDecision = () => setDecisions([...decisions, { text: '', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 }]);
+
       const removeDecision = (index) => {
         if (decisions.length <= 1) return;
         setDecisions(decisions.filter((_, i) => i !== index));
@@ -619,7 +764,11 @@
 ${agendas.map((ag, i) => `${i+1}. ${ag}`).join('\n')}
 
 [지정 결정사항]
-${decisions.map((de, i) => `${i+1}. ${de}`).join('\n')}
+${decisions.map((de, i) => {
+  const deText = typeof de === 'string' ? de : (de.text || '');
+  const deVote = typeof de === 'string' ? '' : ` ${formatVotingResult(de)}`;
+  return `${i+1}. ${deText}${deVote}`;
+}).join('\n')}
 
 [향후 추진사항]
 ${isActionNA ? "향후 추진 조치 필요성 없음" : futureActions.map((fa) => `- 과제: ${fa.task} (담당: ${fa.owner}, 기한: ${fa.deadline})`).join('\n')}
@@ -763,7 +912,11 @@ ${generatedMinutes}
 ${agendas.map((a, i) => `${i+1}. ${a}`).join('\n')}
 
 [결정사항]
-${decisions.map((d, i) => `${i+1}. ${d}`).join('\n')}
+${decisions.map((d, i) => {
+  const text = typeof d === 'string' ? d : (d.text || '');
+  const vote = typeof d === 'string' ? '' : ` ${formatVotingResult(d)}`;
+  return `${i+1}. ${text}${vote}`;
+}).join('\n')}
 
 [회의 상세 토의 내용]
 ${generatedMinutes || "(상세 회의록이 아직 입력되지 않았습니다)"}
@@ -815,7 +968,11 @@ ${generatedMinutes || "회의록 상세 생성 내용이 없습니다. 'AI 회�
 ---------------------------------------------
              최종 결정 및 합의사항
 ---------------------------------------------
-${decisions.map((d, i) => `  결정사항 ${i+1}. ${d}`).join('\n')}
+${decisions.map((d, i) => {
+  const text = typeof d === 'string' ? d : (d.text || '');
+  const vote = typeof d === 'string' ? '' : ` ${formatVotingResult(d)}`;
+  return `  결정사항 ${i+1}. ${text}${vote}`;
+}).join('\n')}
 
 ---------------------------------------------
              향후 조치 및 추진계획
@@ -883,15 +1040,15 @@ ${writtenDate}
                 <h1 className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 bg-clip-text text-transparent">
                   AI 스마트 회의록 작성기
                 </h1>
-                <p className="text-[10px] text-slate-500 font-medium">공공기록물 표준 NAK 1:2025 법적 서식 기반 RAG 생성 비서</p>
+                <p className="text-[10px] text-slate-500 font-medium">본 회의록은 「공공기록물 관리에 관한 법률 시행령」 및 국가기록원 표준 서식을 준수합니다.</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200 shadow-inner">
-                <button onClick={() => loadTemplate('edu_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-indigo-700 bg-white border border-indigo-200/40 shadow-sm hover:bg-indigo-50">인사자문위</button>
-                <button onClick={() => loadTemplate('academic_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-emerald-700 bg-white border border-emerald-200/40 shadow-sm hover:bg-emerald-50">교무위원회</button>
-                <button onClick={() => loadTemplate('edu_office_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-amber-700 bg-white border border-amber-200/40 shadow-sm hover:bg-amber-50">교육청인사위</button>
+                <button onClick={() => loadTemplate('edu_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-indigo-700 bg-white border border-indigo-200/40 shadow-sm hover:bg-indigo-50">회의.0</button>
+                <button onClick={() => loadTemplate('academic_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-emerald-700 bg-white border border-emerald-200/40 shadow-sm hover:bg-emerald-50">회의.1</button>
+                <button onClick={() => loadTemplate('edu_office_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-amber-700 bg-white border border-amber-200/40 shadow-sm hover:bg-amber-50">회의.2</button>
               </div>
 
               <button onClick={() => setShowConfigModal(true)} className="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-250 bg-white shadow-sm" title="환경 설정">
@@ -1066,11 +1223,11 @@ ${writtenDate}
                               value={agenda}
                               onChange={(e) => handleAgendaChange(index, e.target.value)}
                               placeholder={`안건 ${index + 1} 내용을 입력하세요.`}
-                              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-850 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                             />
                             {agendas.length > 1 && (
-                              <button onClick={() => removeAgenda(index)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-lg transition-all shadow-sm flex items-center justify-center shrink-0" title="?덇굔 ??젣">
-                                <Trash2 size={14} />
+                              <button onClick={() => removeAgenda(index)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-lg transition-all shadow-sm flex items-center justify-center shrink-0" title="안건 삭제">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                               </button>
                             )}
                           </div>
@@ -1089,24 +1246,104 @@ ${writtenDate}
                         </button>
                       </div>
                       
-                      <div className="space-y-2.5 max-h-[200px] overflow-y-auto pr-1">
-                        {decisions.map((decision, index) => (
-                          <div key={index} className="flex gap-2 items-center">
-                            <span className="text-[10px] font-bold text-slate-400 w-5 text-center">{index + 1}.</span>
-                            <input
-                              type="text"
-                              value={decision}
-                              onChange={(e) => handleDecisionChange(index, e.target.value)}
-                              placeholder={`의결/결정사항 ${index + 1} 내용을 입력하세요.`}
-                              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-850 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-                            />
-                            {decisions.length > 1 && (
-                              <button onClick={() => removeDecision(index)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-lg transition-all shadow-sm flex items-center justify-center shrink-0" title="寃곗젙?ы빆 ??젣">
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                      <div className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1">
+                        {decisions.map((decision, index) => {
+                          const decText = typeof decision === 'string' ? decision : (decision.text || '');
+                          const decMethod = typeof decision === 'string' ? '구두합의' : (decision.votingMethod || '구두합의');
+                          const decUnanimous = typeof decision === 'string' ? true : (decision.isUnanimous ?? true);
+                          const decYes = typeof decision === 'string' ? 0 : (decision.yesCount || 0);
+                          const decNo = typeof decision === 'string' ? 0 : (decision.noCount || 0);
+                          const decAbstain = typeof decision === 'string' ? 0 : (decision.abstainCount || 0);
+
+                          return (
+                            <div key={index} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2.5 relative shadow-sm">
+                              <div className="flex gap-2 items-center">
+                                <span className="text-[11px] font-black text-indigo-900 bg-indigo-100/60 w-5 h-5 rounded-full flex items-center justify-center shrink-0">{index + 1}</span>
+                                <input
+                                  type="text"
+                                  value={decText}
+                                  onChange={(e) => handleDecisionTextChange(index, e.target.value)}
+                                  placeholder={`의결/결정사항 ${index + 1} 내용을 입력하세요.`}
+                                  className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-semibold"
+                                />
+                                {decisions.length > 1 && (
+                                  <button 
+                                    onClick={() => removeDecision(index)} 
+                                    className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-lg transition-all shadow-sm flex items-center justify-center shrink-0" 
+                                    title="결정사항 삭제"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-dashed border-slate-200/80">
+                                <div>
+                                  <label className="block text-[9px] font-bold text-slate-400 mb-1">의결 방식</label>
+                                  <select 
+                                    value={decMethod} 
+                                    onChange={(e) => handleDecisionVotingChange(index, 'votingMethod', e.target.value)}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                  >
+                                    <option value="구두합의">구두합의</option>
+                                    <option value="거수표결">거수표결</option>
+                                    <option value="기립표결">기립표결</option>
+                                    <option value="무기명투표">무기명투표</option>
+                                    <option value="기명투표">기명투표</option>
+                                  </select>
+                                </div>
+                                
+                                <div className="flex items-center pt-3.5">
+                                  <input
+                                    type="checkbox"
+                                    id={`unanimous-${index}`}
+                                    checked={decUnanimous}
+                                    onChange={(e) => handleDecisionVotingChange(index, 'isUnanimous', e.target.checked)}
+                                    className="w-3.5 h-3.5 text-indigo-600 border-slate-350 rounded focus:ring-indigo-500 cursor-pointer"
+                                  />
+                                  <label htmlFor={`unanimous-${index}`} className="text-xs font-bold text-slate-700 ml-1.5 cursor-pointer select-none">
+                                    만장일치 여부
+                                  </label>
+                                </div>
+
+                                {!decUnanimous && (
+                                  <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2 animate-in slide-in-from-top-2 duration-150">
+                                    <div>
+                                      <label className="block text-[9px] font-bold text-slate-400 mb-1">찬성 (표)</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={decYes}
+                                        onChange={(e) => handleDecisionVotingChange(index, 'yesCount', parseInt(e.target.value) || 0)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-bold text-slate-400 mb-1">반대 (표)</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={decNo}
+                                        onChange={(e) => handleDecisionVotingChange(index, 'noCount', parseInt(e.target.value) || 0)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-bold text-slate-400 mb-1">기권 (표)</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={decAbstain}
+                                        onChange={(e) => handleDecisionVotingChange(index, 'abstainCount', parseInt(e.target.value) || 0)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -1147,8 +1384,8 @@ ${writtenDate}
                               <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-black text-indigo-900 bg-indigo-100/60 px-2 py-0.5 rounded-md">추진과제 {index + 1}</span>
                                 {futureActions.length > 1 && (
-                                  <button onClick={() => removeAction(index)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-lg transition-all shadow-sm flex items-center justify-center" title="異붿쭊怨쇱젣 ??젣">
-                                    <Trash2 size={13} />
+                                  <button onClick={() => removeAction(index)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-lg transition-all shadow-sm flex items-center justify-center" title="추진과제 삭제">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                                   </button>
                                 )}
                               </div>
@@ -1196,19 +1433,34 @@ ${writtenDate}
                 {/* TAB 3: TRANSCRIPT & GENERATION */}
                 {activeTab === 'transcript' && (
                   <div className="space-y-4 flex flex-col h-full">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1">회의록 작성 기법</label>
-                        <select value={writingMethod} onChange={(e) => setWritingMethod(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold">
-                          <option value="conversational">대화체 (전체 발언록)</option>
-                          <option value="speakerSummary">발언자별 핵심 요약형</option>
-                          <option value="agendaNarrative">안건별 논의 서술형</option>
-                          <option value="decisionCentric">결정사항 중심 기록형</option>
-                        </select>
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성 기법</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: 'conversational', label: '대화체 (전체 발언록)' },
+                            { id: 'speakerSummary', label: '발언자별 핵심 요약형' },
+                            { id: 'agendaNarrative', label: '안건별 논의 서술형' },
+                            { id: 'decisionCentric', label: '결정사항 중심 기록형' }
+                          ].map(method => (
+                            <button
+                              key={method.id}
+                              type="button"
+                              onClick={() => setWritingMethod(method.id)}
+                              className={`px-2.5 py-2 text-[10px] font-bold rounded-xl border transition-all text-center flex items-center justify-center min-h-[38px] leading-tight ${
+                                writingMethod === method.id
+                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10'
+                                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                              }`}
+                            >
+                              {method.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-slate-400 mb-1">회의록 톤앤매너</label>
-                        <div className="flex items-center h-[34px] bg-slate-50 border border-slate-200 rounded-lg px-3">
+                        <div className="flex items-center h-[38px] bg-slate-50 border border-slate-200 rounded-xl px-3 shadow-sm">
                           <input
                             type="checkbox"
                             id="formalMode"
@@ -1220,6 +1472,15 @@ ${writtenDate}
                             공공 격식체 적용
                           </label>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Caution Message */}
+                    <div className="bg-amber-50 border border-amber-250 rounded-xl p-3.5 flex gap-2.5 shadow-sm text-amber-850 mb-3 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div className="text-[10.5px] sm:text-[11px] leading-relaxed font-semibold">
+                        <strong className="text-amber-900 font-extrabold">[주의] </strong>
+                        공공기록물은 '사실성(Fact)'이 생명입니다. 녹취록 내용 없이 AI가 가상의 대화 맥락을 '창작'하여 공문서로 생산하는 것은 감사 시 허위 공문서 작성 논란이 생길 수 있는 심각한 리스크이므로 녹취록, 대화요약, 위원별 발언 요지 등을 기재해 주시기 바랍니다.
                       </div>
                     </div>
 
@@ -1244,6 +1505,46 @@ ${writtenDate}
                         onChange={(e) => setWrittenDate(e.target.value)}
                         placeholder="예: 2026년 06월 13일"
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식)</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextNA = !isSignaturesNA;
+                            setIsSignaturesNA(nextNA);
+                            if (!nextNA) {
+                              setIsSignaturesAuto(true);
+                              setAttendeeSignatures(parseAttendeesToSignatures(attendees, chairperson));
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border shadow-sm ${
+                            isSignaturesNA
+                              ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 active:scale-95'
+                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 active:scale-95'
+                          }`}
+                        >
+                          해당없음
+                        </button>
+                      </div>
+                      <textarea
+                        value={isSignaturesNA ? '해당없음' : attendeeSignatures}
+                        onChange={(e) => {
+                          if (isSignaturesNA) return;
+                          setAttendeeSignatures(e.target.value);
+                          setIsSignaturesAuto(false);
+                        }}
+                        disabled={isSignaturesNA}
+                        placeholder="예: 박소현(인), 이민우(인)"
+                        rows="2"
+                        className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold ${
+                          isSignaturesNA
+                            ? 'bg-slate-100 text-slate-400 border-slate-250 cursor-not-allowed'
+                            : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white'
+                        }`}
                       />
                     </div>
 
@@ -1375,9 +1676,16 @@ ${writtenDate}
                           <tr>
                             <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">회의 안건</td>
                             <td colSpan="3" className="px-3 py-2.5 font-medium leading-relaxed">
-                              {agendas.map((agenda, index) => (
-                                <div key={index}>안건 {index + 1}. {agenda}</div>
-                              ))}
+                              {agendas.map((agenda, index) => {
+                                const agendaText = typeof agenda === 'string' ? agenda : (agenda.text || '');
+                                const votingInfo = typeof agenda === 'string' ? '' : ` ${formatVotingResult(agenda)}`;
+                                return (
+                                  <div key={index} className="mb-1 last:mb-0">
+                                    <span className="font-semibold">안건 {index + 1}. {agendaText}</span>
+                                    {votingInfo && <span className="text-[11px] text-slate-500 ml-1.5 font-normal">{votingInfo}</span>}
+                                  </div>
+                                );
+                              })}
                             </td>
                           </tr>
                         </tbody>
@@ -1410,21 +1718,26 @@ ${writtenDate}
                         2. 최종 의결 및 결정사항
                       </h3>
                       <ul className="list-decimal pl-5 space-y-2 text-xs md:text-sm text-slate-800 leading-relaxed font-semibold">
-                        {decisions.map((dec, idx) => (
-                          <li key={idx} className="pl-1">{dec}</li>
-                        ))}
+                        {decisions.map((dec, idx) => {
+                          const decText = typeof dec === 'string' ? dec : (dec.text || '');
+                          const votingInfo = typeof dec === 'string' ? '' : ` ${formatVotingResult(dec)}`;
+                          return (
+                            <li key={idx} className="pl-1">
+                              <span>{decText}</span>
+                              {votingInfo && <span className="text-[11px] text-slate-500 ml-1.5 font-normal">{votingInfo}</span>}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
 
                     {/* Section 3: Action Items */}
-                    <div className="mb-12">
-                      <h3 className="text-sm md:text-base font-extrabold text-slate-900 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wider flex items-center">
-                        <span className="w-1 h-4 bg-indigo-600 rounded mr-2 inline-block"></span>
-                        3. 향후 조치 및 추진계획
-                      </h3>
-                      {isActionNA ? (
-                        <p className="text-xs md:text-sm text-slate-600 italic pl-1">※ 해당 사항 없음 (위원 전원 합의하에 별도의 후속 추진계획 및 조치 요구사항 없음)</p>
-                      ) : (
+                    {!isActionNA && (
+                      <div className="mb-12">
+                        <h3 className="text-sm md:text-base font-extrabold text-slate-900 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wider flex items-center">
+                          <span className="w-1 h-4 bg-indigo-600 rounded mr-2 inline-block"></span>
+                          3. 향후 조치 및 추진계획
+                        </h3>
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs border border-slate-200 border-collapse">
                             <thead>
@@ -1447,32 +1760,45 @@ ${writtenDate}
                             </tbody>
                           </table>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Signature block */}
-                    <div className="border-t border-slate-300 pt-8 mt-12 flex flex-col items-center">
-                      <p className="text-xs md:text-sm text-slate-600 font-bold mb-6">상기 회의록 기록 내용이 사실과 다름없음을 보증 및 확인함.</p>
-                      
-                      <div className="text-xs text-slate-500 font-black tracking-widest mb-10">{writtenDate}</div>
-                      
-                      <div className="flex flex-col sm:flex-row gap-8 sm:gap-24 items-center justify-center w-full">
-                        <div className="flex items-center gap-1.5 relative">
-                          <span className="text-xs font-black text-slate-800">위원장 직위 및 성함: </span>
-                          <span className="text-sm font-black border-b border-slate-400 px-3 pb-0.5">{chairperson}</span>
-                          <div className="w-11 h-11 rounded-full border-[1.5px] border-red-500/50 text-red-500/80 text-[10px] font-black flex items-center justify-center rotate-12 select-none absolute -right-10 -bottom-2 border-double bg-red-50/5 pr-[1px] pt-[1px]">
-                            {getStampName()}
-                          </div>
+                    <div className="border-t border-slate-300 pt-8 mt-12 flex flex-col items-center w-full print-flex">
+                      {/* Written Date */}
+                      {writtenDate && (
+                        <div className="text-sm text-slate-800 font-extrabold tracking-widest mb-6 text-center w-full">
+                          {writtenDate}
                         </div>
-
-                        <div className="flex items-center gap-1.5 relative">
-                          <span className="text-xs font-black text-slate-800">기록담당 간사 서명: </span>
-                          <span className="text-sm font-black border-b border-slate-400 w-28 text-center pb-0.5 text-slate-300">정선아</span>
-                          <div className="w-11 h-11 rounded-full border border-dashed border-slate-300 text-slate-300 text-[10px] font-bold flex items-center justify-center rotate-6 select-none absolute -right-10 -bottom-2">
-                            (서명)
-                          </div>
+                      )}
+                      
+                      {/* Chairperson & Secretary Signatures */}
+                      <div className="flex justify-center gap-16 mb-10 text-xs sm:text-sm font-bold w-full print-flex">
+                        <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                          {formatChairpersonSignature(chairperson)}
+                        </div>
+                        <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                          {formatSecretarySignature(attendees)}
                         </div>
                       </div>
+
+                      {/* Attendee Signatures Grid */}
+                      {!isSignaturesNA && attendeeSignatures && (
+                        <div className="w-full max-w-2xl border-t border-dashed border-slate-200 pt-6">
+                          <p className="text-[11px] text-slate-400 font-bold mb-5 text-center tracking-widest uppercase">참석위원 서명 및 날인</p>
+                          <div className="grid grid-cols-5 gap-y-5 gap-x-6 px-2 print-grid">
+                            {attendeeSignatures.split(',').map((item, idx) => {
+                              const nameAndIn = item.trim();
+                              if (!nameAndIn) return null;
+                              return (
+                                <div key={idx} className="border-b border-slate-200 pb-1 h-8 flex items-end justify-center print-flex">
+                                  <span className="text-xs font-semibold text-slate-850">{nameAndIn}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
