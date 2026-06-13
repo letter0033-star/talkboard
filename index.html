@@ -165,7 +165,7 @@
     const MEETING_TEMPLATES = {
       edu_committee: {
         title: "초등학교 인사자문위원회",
-        orgType: "교육기관",
+        orgType: "교육기관(초중고/대학)",
         orgName: "늘푸른초등학교",
         chairperson: "교감 김지훈",
         meetingName: "제5차 교원인사자문위원회 회의",
@@ -207,7 +207,7 @@
       },
       academic_committee: {
         title: "초등학교 교무위원회",
-        orgType: "교육기관",
+        orgType: "교육기관(초중고/대학)",
         orgName: "미래초등학교",
         chairperson: "교감 최성우",
         meetingName: "2026학년도 제2학기 학업성적관리 및 교육과정 운영 교무위원회",
@@ -250,7 +250,7 @@
       },
       edu_office_committee: {
         title: "교육청 인사위원회",
-        orgType: "공공기관",
+        orgType: "교육기관(교육청/기타)",
         orgName: "서울특별시교육청",
         chairperson: "행정국장 최영민",
         meetingName: "2026년도 제3회 지방공무원 인사위원회",
@@ -385,6 +385,7 @@
 
     function App() {
       const [user, setUser] = useState(null);
+      const [mobileTab, setMobileTab] = useState('edit');
 
       const safeGetLocalItem = (key) => {
         try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
@@ -403,7 +404,7 @@
       };
 
       // Core Form States
-      const [orgType, setOrgType] = useState(() => safeGetLocalItem('local_minutes_org_type') || '교육기관');
+      const [orgType, setOrgType] = useState(() => safeGetLocalItem('local_minutes_org_type') || '교육기관(초중고/대학)');
       const [orgName, setOrgName] = useState(() => safeGetLocalItem('local_minutes_org_name') || '늘푸른초등학교');
       const [chairperson, setChairperson] = useState(() => safeGetLocalItem('local_minutes_chairperson') || '교감 김지훈');
       const [meetingName, setMeetingName] = useState(() => safeGetLocalItem('local_minutes_meeting_name') || '제5차 교원인사자문위원회 회의');
@@ -817,6 +818,7 @@ ${rawTranscript || "초안 및 녹취록이 비어있습니다. 안건과 결정
             setGeneratedMinutes(generatedText);
             setChatLog([{ role: 'system', text: '회의록 본문 작성이 완료되었습니다. 우측 프리뷰 창에서 확인 가능합니다.' }]);
             setRightTab('preview');
+            setMobileTab('preview');
             showToastMsg('AI 스마트 회의록 생성이 완료되었습니다.', 'success');
           } else {
             throw new Error("Gemini API 응답 분석에 실패했습니다.");
@@ -880,6 +882,7 @@ ${generatedMinutes}
           if (updatedText) {
             setGeneratedMinutes(updatedText);
             setChatLog(prev => [...prev, { role: 'assistant', text: `수정 요청 사항을 충실히 검토 반영하여 최종 조율을 마쳤습니다.` }]);
+            setMobileTab('preview');
             showToastMsg('회의록 조율이 완료되었습니다.', 'success');
           } else {
             throw new Error("수정본 텍스트 유실");
@@ -1061,7 +1064,7 @@ ${writtenDate}
           <div class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden print:overflow-visible print:h-auto">
             
             {/* LEFT CONFIGURATION CONSOLE PANEL */}
-            <aside className="w-full lg:w-[40%] xl:w-[35%] border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto no-print">
+            <aside className={`w-full lg:w-[40%] xl:w-[35%] border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto no-print pb-24 lg:pb-0 ${mobileTab === 'edit' ? 'flex' : 'hidden lg:flex'}`}>
               
               <div className="flex border-b border-slate-200 sticky top-0 bg-white z-10 shadow-sm">
                 {[
@@ -1122,7 +1125,7 @@ ${writtenDate}
                     </div>
 
                     <div className="space-y-3.5">
-                      <h2 className="text-[11px] font-extrabold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <h2 className="text-[13px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 기관 정보
                       </h2>
                       
@@ -1130,10 +1133,10 @@ ${writtenDate}
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 mb-1">기관 구분</label>
                           <select value={orgType} onChange={(e) => setOrgType(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm">
-                            <option value="공공기관">공공기관 (부처/지자체)</option>
-                            <option value="교육기관">교육기관 (초중고/대학)</option>
-                            <option value="민간기업">민간기업 (일반기업)</option>
-                            <option value="사회단체">사회단체 (비영리/학회)</option>
+                            <option value="교육기관(초중고/대학)">교육기관(초중고/대학)</option>
+                            <option value="교육기관(교육청/기타)">교육기관(교육청/기타)</option>
+                            <option value="공공기관(부처/지자체)">공공기관(부처/지자체)</option>
+                            <option value="사회단체(비영리/학회)">사회단체(비영리/학회)</option>
                           </select>
                         </div>
                         <div>
@@ -1147,7 +1150,7 @@ ${writtenDate}
                         <input type="text" value={orgName} onChange={(e) => setOrgName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm" />
                       </div>
 
-                      <h2 className="text-[11px] font-extrabold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5 pt-3">
+                      <h2 className="text-[13px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1.5 pt-3">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 회의 기본 사항
                       </h2>
 
@@ -1206,7 +1209,7 @@ ${writtenDate}
                     {/* Agendas list */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                        <h2 className="text-[11px] font-extrabold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <h2 className="text-[13px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 심의 안건 목록
                         </h2>
                         <button onClick={addAgenda} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-0.5 text-[10px] font-bold">
@@ -1238,7 +1241,7 @@ ${writtenDate}
                     {/* Decisions list */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                        <h2 className="text-[11px] font-extrabold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <h2 className="text-[13px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 최종 의결 및 결정사항
                         </h2>
                         <button onClick={addDecision} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-0.5 text-[10px] font-bold">
@@ -1350,7 +1353,7 @@ ${writtenDate}
                     {/* Future Action Items */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                        <h2 className="text-[11px] font-extrabold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <h2 className="text-[13px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> 향후 조치 및 추진계획
                         </h2>
                         {!isActionNA && (
@@ -1582,7 +1585,7 @@ ${writtenDate}
             </aside>
 
             {/* RIGHT PREVIEW & AI REFINE CHAT PANEL */}
-            <main className={`flex-1 flex flex-col min-h-0 relative print:bg-white print:overflow-visible ${rightTab === 'preview' ? 'bg-white' : 'bg-slate-50'}`}>
+            <main className={`flex-1 flex flex-col min-h-0 relative print:bg-white print:overflow-visible ${rightTab === 'preview' ? 'bg-white' : 'bg-slate-50'} ${mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
               
               {/* Tab Switches on Right Panel */}
               <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 py-2 no-print shadow-sm">
@@ -1626,7 +1629,7 @@ ${writtenDate}
               </div>
 
               {/* View Content area */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center min-h-0 print:overflow-visible print:p-0 print:block">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-8 pb-24 lg:pb-8 flex justify-center min-h-0 print:overflow-visible print:p-0 print:block">
                 
                 {/* PREVIEW CONTAINER */}
                 {rightTab === 'preview' && (
@@ -1943,6 +1946,32 @@ ${writtenDate}
               </div>
             </div>
           )}
+
+          {/* MOBILE BOTTOM NAVIGATION BAR */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-around px-4 z-40 shadow-lg no-print">
+            <button 
+              onClick={() => setMobileTab('edit')} 
+              className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-all ${
+                mobileTab === 'edit' 
+                  ? 'text-indigo-600 font-extrabold scale-105' 
+                  : 'text-slate-400 hover:text-slate-600 font-medium'
+              }`}
+            >
+              <FileText size={18} />
+              <span className="text-[10px]">작성 / 설정</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('preview')} 
+              className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-all ${
+                mobileTab === 'preview' 
+                  ? 'text-indigo-600 font-extrabold scale-105' 
+                  : 'text-slate-400 hover:text-slate-600 font-medium'
+              }`}
+            >
+              <Printer size={18} />
+              <span className="text-[10px]">회의록 프리뷰</span>
+            </button>
+          </div>
 
         </div>
       );
