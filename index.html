@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 스마트 회의록 작성기 (NAK 1:2025)</title>
   
+  <!-- React & ReactDOM -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- React & ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  
   <!-- Babel for JSX Compilation in Browser -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.0/babel.min.js"></script>
   
   <!-- Firebase Compat (v10) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -21,8 +21,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   
   <!-- Lucide Icons (UMD) -->
-  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-  <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 
   
   <!-- Google Fonts (Outfit & Noto Sans KR) -->
@@ -110,24 +109,68 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
     
-    // Resolve Lucide icons from UMD global variable
-    const icons = window.lucideReact || window.LucideReact || {};
-    const { 
-      Sparkles = () => null, 
-      Plus = () => null, 
-      Minus = () => null, 
-      Trash2 = () => null, 
-      Copy = () => null, 
-      Download = () => null, 
-      Printer = () => null, 
-      FileText = () => null, 
-      Info = () => null, 
-      Send = () => null, 
-      History = () => null, 
-      Settings = () => null, 
-      Check = () => null, 
-      AlertTriangle = () => null 
-    } = icons;
+    // Resolve Lucide icons from vanilla lucide global variable to avoid React race conditions
+    const createLucideReactIcon = (iconName) => {
+      return (props) => {
+        const svgRef = useRef(null);
+        useEffect(() => {
+          if (svgRef.current && window.lucide) {
+            // Create the icon node using lucide library
+            const iconNode = window.lucide.icons[iconName];
+            if (iconNode) {
+              // Clear previous children
+              svgRef.current.innerHTML = '';
+              // Create SVG attributes
+              const svg = svgRef.current;
+              const attrs = iconNode[1];
+              Object.entries(attrs).forEach(([key, value]) => {
+                svg.setAttribute(key, value);
+              });
+              // Append paths
+              const paths = iconNode[2];
+              paths.forEach(([tagName, tagAttrs]) => {
+                const child = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+                Object.entries(tagAttrs).forEach(([k, v]) => {
+                  child.setAttribute(k, v);
+                });
+                svg.appendChild(child);
+              });
+            }
+          }
+        }, []);
+
+        const size = props.size || 24;
+        const className = props.className || '';
+        return (
+          <svg
+            ref={svgRef}
+            width={size}
+            height={size}
+            className={className}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          ></svg>
+        );
+      };
+    };
+
+    const Sparkles = createLucideReactIcon('Sparkles');
+    const Plus = createLucideReactIcon('Plus');
+    const Minus = createLucideReactIcon('Minus');
+    const Trash2 = createLucideReactIcon('Trash2');
+    const Copy = createLucideReactIcon('Copy');
+    const Download = createLucideReactIcon('Download');
+    const Printer = createLucideReactIcon('Printer');
+    const FileText = createLucideReactIcon('FileText');
+    const Info = createLucideReactIcon('Info');
+    const Send = createLucideReactIcon('Send');
+    const History = createLucideReactIcon('History');
+    const Settings = createLucideReactIcon('Settings');
+    const Check = createLucideReactIcon('Check');
+    const AlertTriangle = createLucideReactIcon('AlertTriangle');
 
     // --- FIREBASE CONFIGURATION ---
     const getEnvFirebaseConfig = () => {
@@ -156,10 +199,17 @@
     const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : 'minutes-generator-app-v2';
     const firebaseConfig = getEnvFirebaseConfig();
 
-    // Initialize Firebase Compat
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // Initialize Firebase Compat safely to support offline mode
+    let app = null;
+    let auth = null;
+    let db = null;
+    try {
+      app = firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+    } catch (e) {
+      console.warn("Firebase 초기화 실패 (오프라인/스탠드얼론 모드로 계속 진행):", e);
+    }
 
     // --- PREMIUM BUILT-IN TEMPLATES ---
     const MEETING_TEMPLATES = {
@@ -187,7 +237,7 @@
           "병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의",
           "학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정"
         ],
-        writingMethod: "speakerSummary",
+        writingMethod: "conversational",
         isActionNA: false,
         futureActions: [
           { task: "우선 배정 대상자 서류 취합 및 희망원 접수 안내", owner: "정선아 교사", deadline: "2026-12-05" },
@@ -382,10 +432,10 @@
       }
       // Ensure secretary is included
       if (secName) {
-        const secSig = `${secName}(인)`;
+        const cleanSecSig = `${secName}(인)`;
         const alreadyExists = names.some(n => n.includes(secName));
         if (!alreadyExists) {
-          names.push(secSig);
+          names.push(cleanSecSig);
         }
       }
       return names.join(', ');
@@ -398,25 +448,6 @@
         ? '만장일치 찬성'
         : `찬성 ${decision.yesCount || 0}표, 반대 ${decision.noCount || 0}표, 기권 ${decision.abstainCount || 0}표`;
       return `(의결 방식: ${method} / 결과: ${resultStr})`;
-    };
-
-    const fetchWithRetry = async (targetUrl, options, retries = 5, delay = 1000) => {
-      try {
-        const response = await fetch(targetUrl, options);
-        if (!response.ok) {
-          if (response.status === 400 || response.status === 403) {
-            throw new Error("Gemini API 키가 입력되지 않았거나 유효하지 않습니다. 톱니바퀴 아이콘을 눌러 API 키를 확인하세요.");
-          }
-          throw new Error(`HTTP ${response.status} 오류가 발생했습니다.`);
-        }
-        return await response.json();
-      } catch (error) {
-        if (retries > 0 && !error.message.includes("API 키")) {
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return fetchWithRetry(targetUrl, options, retries - 1, delay * 2);
-        }
-        throw error;
-      }
     };
 
     function App() {
@@ -451,11 +482,9 @@
       const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem('local_minutes_external_attendees') || '이영희(학교운영위원장), 박진아(학부모회장)');
       const [department, setDepartment] = useState(() => safeGetLocalItem('local_minutes_department') || '교무기획부');
       const [meetingType, setMeetingType] = useState(() => safeGetLocalItem('local_minutes_meeting_type') || '임시');
-      const [writingMethod, setWritingMethod] = useState('speakerSummary');
+      const [writingMethod, setWritingMethod] = useState('conversational');
       const [rawTranscript, setRawTranscript] = useState('');
       const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem('local_minutes_written_date') || getCurrentDateString());
-      const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem('local_minutes_meeting_order') || '개회-경과보고-안건 심의 및 토론-정리-폐회');
-      const [showWrittenDate, setShowWrittenDate] = useState(() => safeGetLocalItem('local_minutes_show_written_date') !== 'false');
 
       // Attendee signatures states
       const [isSignaturesNA, setIsSignaturesNA] = useState(() => safeGetLocalItem('local_minutes_signatures_na') === 'true');
@@ -562,6 +591,7 @@
 
       // --- AUTHENTICATION FLOW ---
       useEffect(() => {
+        if (!auth) return;
         const initAuth = async () => {
           try {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -575,7 +605,9 @@
         };
         initAuth();
         const unsubscribe = auth.onAuthStateChanged(setUser);
-        return () => unsubscribe();
+        return () => {
+          if (unsubscribe) unsubscribe();
+        };
       }, []);
 
       // --- PERSISTENCE: LOCAL STORAGE INITIAL LOAD ---
@@ -609,8 +641,6 @@
           localStorage.setItem('local_minutes_department', department);
           localStorage.setItem('local_minutes_meeting_type', meetingType);
           localStorage.setItem('local_minutes_written_date', writtenDate);
-          localStorage.setItem('local_minutes_meeting_order', meetingOrder);
-          localStorage.setItem('local_minutes_show_written_date', showWrittenDate ? 'true' : 'false');
           
           localStorage.setItem('local_minutes_signatures_na', isSignaturesNA ? 'true' : 'false');
           localStorage.setItem('local_minutes_attendee_signatures', attendeeSignatures);
@@ -638,8 +668,6 @@
           localStorage.removeItem('local_minutes_department');
           localStorage.removeItem('local_minutes_meeting_type');
           localStorage.removeItem('local_minutes_written_date');
-          localStorage.removeItem('local_minutes_meeting_order');
-          localStorage.removeItem('local_minutes_show_written_date');
 
           localStorage.removeItem('local_minutes_signatures_na');
           localStorage.removeItem('local_minutes_attendee_signatures');
@@ -649,8 +677,6 @@
           setIsSignaturesAuto(true);
           const parsedAtts = parseAttendeesToSignatures(attendees, chairperson);
           setAttendeeSignatures(parsedAtts);
-          setMeetingOrder('개회-경과보고-안건 심의 및 토론-정리-폐회');
-          setShowWrittenDate(true);
 
           setIsRemembered(false);
           showToastMsg('저장된 기본 정보 및 회의 사항이 PC에서 삭제되었습니다.', 'success');
@@ -675,7 +701,6 @@
             setDepartment(t.department);
             setMeetingType(t.meetingType);
             setWrittenDate(getCurrentDateString());
-            setMeetingOrder(t.meetingOrder || '개회-경과보고-안건 심의 및 토론-정리-폐회');
           }
           setAgendas(t.agendas);
           const mappedDecisions = (t.decisions || []).map(dec => {
@@ -833,6 +858,25 @@ ${rawTranscript || "초안 및 녹취록이 비어있습니다. 안건과 결정
           systemInstruction: { parts: [{ text: systemPrompt }] }
         };
 
+        const fetchWithRetry = async (targetUrl, options, retries = 5, delay = 1000) => {
+          try {
+            const response = await fetch(targetUrl, options);
+            if (!response.ok) {
+              if (response.status === 400 || response.status === 403) {
+                throw new Error("Gemini API 키가 입력되지 않았거나 유효하지 않습니다. 톱니바퀴 아이콘을 눌러 API 키를 확인하세요.");
+              }
+              throw new Error(`HTTP ${response.status} 오류가 발생했습니다.`);
+            }
+            return await response.json();
+          } catch (error) {
+            if (retries > 0 && !error.message.includes("API 키")) {
+              await new Promise(resolve => setTimeout(resolve, delay));
+              return fetchWithRetry(targetUrl, options, retries - 1, delay * 2);
+            }
+            throw error;
+          }
+        };
+
         try {
           const result = await fetchWithRetry(url, {
             method: "POST",
@@ -872,7 +916,6 @@ ${rawTranscript || "초안 및 녹취록이 비어있습니다. 안건과 결정
         let activeApiKey = userGeminiApiKey.trim() || 'AQ.Ab8RN6K_pgy8uFPGXx02ousFl1haor4KYgoRkDE3_Wxqutr86A';
         if (!activeApiKey) {
           setErrorMessage("Gemini API 키가 없습니다. 설정에서 입력해 주세요.");
-          setChatLog(prev => [...prev, { role: 'assistant', text: "Gemini API 키가 설정되지 않았습니다. 설정(톱니바퀴)에서 입력해주십시오." }]);
           setIsGenerating(false);
           return;
         }
@@ -880,48 +923,17 @@ ${rawTranscript || "초안 및 녹취록이 비어있습니다. 안건과 결정
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
 
         const systemPrompt = `당신은 문서 전문 교정 에디터입니다. 사용자가 기존에 작성된 회의록 초안에 대해 추가적인 수정 및 밀착 조정을 요구했습니다. 
-회의 기본 컨텍스트(기관명, 일시, 참석자, 안건, 결정사항 등)와 기존에 생성된 회의록 내용을 종합적으로 참고하여, 사용자의 요구사항을 정밀하게 반영한 최종 마크다운 회의록 텍스트만을 그대로 반환하십시오. 
-절대 중간 설명이나 인삿말을 덧붙이지 마십시오. 수정본 작성 시에도 본문 최상단에 중복되는 '회의개요'나 '회의 기본 정보' 섹션은 일절 포함시키지 마십시오.`;
-
-        const metaContext = `
-[기관 정보]
-- 구분: ${orgType}
-- 기관명: ${orgName}
-- 위원장 직위 / 성함: ${chairperson}
-
-[회의 정보]
-- 회의명: ${meetingName}
-- 회의 목적: ${meetingPurpose}
-- 일시 및 장소: ${dateTime} / ${location}
-- 내부 참석 위원: ${attendees}
-- 외부 참석 위원: ${externalAttendees || '없음'}
-- 주관 부서 / 회의 성격: ${department} / ${meetingType}
-
-[지정 안건]
-${agendas.map((ag, i) => `${i+1}. ${ag}`).join('\n')}
-
-[지정 결정사항]
-${decisions.map((de, i) => {
-  const deText = typeof de === 'string' ? de : (de.text || '');
-  const deVote = typeof de === 'string' ? '' : ` ${formatVotingResult(de)}`;
-  return `${i+1}. ${deText}${deVote}`;
-}).join('\n')}
-
-[향후 추진사항]
-${isActionNA ? "향후 추진 조치 필요성 없음" : futureActions.map((fa) => `- 과제: ${fa.task} (담당: ${fa.owner}, 기한: ${fa.deadline})`).join('\n')}
-`;
+요구사항을 정밀하게 반영하여 기존 회의록 텍스트를 대폭 정교화하고 교정하여 개선된 최종 마크다운 회의록 텍스트만을 그대로 반환하십시오. 절대 중간 설명이나 인삿말을 덧붙이지 마십시오.
+수정본 작성 시에도 본문 최상단에 중복되는 '회의개요'나 '회의 기본 정보' 섹션은 일절 포함시키지 마십시오.`;
 
         const userQuery = `
-회의 기본 컨텍스트:
-${metaContext}
-
 [기존에 생성된 회의록]
 ${generatedMinutes}
 
 [사용자의 추가 교정/수정 요청]
 "${userAsk}"
 
-위의 회의 기본 컨텍스트와 기존 회의록 텍스트를 철저히 참고하여, 사용자의 추가 교정/수정 요청 사항이 정확하게 반영된 업그레이드 회의록 전문을 마크다운 양식으로 다시 생성해주세요.`;
+위의 사용자 피드백과 교정 지침을 철저히 반영하여, 더욱 가다듬고 정제된 업그레이드 회의록 전문을 마크다운 양식으로 다시 생성해주세요.`;
 
         const payload = {
           contents: [{ parts: [{ text: userQuery }] }],
@@ -929,11 +941,13 @@ ${generatedMinutes}
         };
 
         try {
-          const result = await fetchWithRetry(url, {
+          const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
+          if (!response.ok) throw new Error(`HTTP ${response.status} 오류`);
+          const result = await response.json();
           const updatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
           if (updatedText) {
             setGeneratedMinutes(updatedText);
@@ -941,13 +955,12 @@ ${generatedMinutes}
             setMobileTab('preview');
             showToastMsg('회의록 조율이 완료되었습니다.', 'success');
           } else {
-            throw new Error("Gemini API 응답 분석에 실패했습니다.");
+            throw new Error("수정본 텍스트 유실");
           }
         } catch (error) {
           console.error(error);
           setErrorMessage(`교정 처리에 실패했습니다: ${error.message}`);
-          setChatLog(prev => [...prev, { role: 'assistant', text: `오류가 발생했습니다: ${error.message}. API 키나 네트워크 상태를 확인해주세요.` }]);
-          showToastMsg('교정 처리 실패: ' + error.message, 'error');
+          showToastMsg('교정 처리 실패', 'error');
         } finally {
           setIsGenerating(false);
         }
@@ -963,7 +976,6 @@ ${generatedMinutes}
 회의목적: ${meetingPurpose}
 개최일시: ${dateTime}
 장소: ${location}
-진행순서: ${meetingOrder}
 내부 참석 위원: ${attendees}
 외부 참석 위원: ${externalAttendees || '없음'}
 주관부서: ${department}
@@ -1013,7 +1025,6 @@ ${isActionNA ? "해당사항 없음 (별도의 후속 추진계획이 없음)" :
 - 회의 목적 : ${meetingPurpose}
 - 개최 일시 : ${dateTime}
 - 개최 장소 : ${location}
-- 진행 순서 : ${meetingOrder}
 - 주관 부서 : ${department}
 - 회의 성격 : ${meetingType}
 - 내부 참석 위원  : ${attendees}
@@ -1120,7 +1131,7 @@ ${writtenDate}
           </header>
 
           {/* MAIN COLUMN BODY */}
-          <div class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden print:overflow-visible print:h-auto">
+          <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden print:overflow-visible print:h-auto">
             
             {/* LEFT CONFIGURATION CONSOLE PANEL */}
             <aside className={`w-full lg:w-[40%] xl:w-[35%] border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto no-print pb-24 lg:pb-0 ${mobileTab === 'edit' ? 'flex' : 'hidden lg:flex'}`}>
@@ -1257,11 +1268,6 @@ ${writtenDate}
                       <div>
                         <label className="block text-[10px] font-bold text-slate-400 mb-1">외부 참석 위원 (선택)</label>
                         <textarea value={externalAttendees} onChange={(e) => setExternalAttendees(e.target.value)} placeholder="외부 참석자가 없을 경우 공란으로 비워두세요." rows="2" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm resize-none"></textarea>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1">진행 순서</label>
-                        <input type="text" value={meetingOrder} onChange={(e) => setMeetingOrder(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold" />
                       </div>
                     </div>
                   </div>
@@ -1505,8 +1511,8 @@ ${writtenDate}
                         <label className="block text-[10px] font-bold text-slate-400">회의록 작성 기법</label>
                         <div className="grid grid-cols-2 gap-2">
                           {[
-                            { id: 'speakerSummary', label: '안건별 발언자 요약형' },
                             { id: 'conversational', label: '대화체 (전체 발언록)' },
+                            { id: 'speakerSummary', label: '발언자별 핵심 요약형' },
                             { id: 'agendaNarrative', label: '안건별 논의 서술형' },
                             { id: 'decisionCentric', label: '결정사항 중심 기록형' }
                           ].map(method => (
@@ -1547,7 +1553,7 @@ ${writtenDate}
                       <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                       <div className="text-[10.5px] sm:text-[11px] leading-relaxed font-semibold">
                         <strong className="text-amber-900 font-extrabold">[주의] </strong>
-                        공공기록물은 '사실성(Fact)'이 생명입니다. 녹취록 내용 없이 AI가 가상의 대화 맥락을 '창작'하여 공문서로 생산하는 것은 감사 시 허위 공문서 작성 논란이 생길 수 있는 심각한 리스크입니다. 녹취록 텍스트 붙여 넣기 또는 대화내용 요약, 위원별 발언 요지 등을 기재해 주시기 바랍니다.
+                        공공기록물은 '사실성(Fact)'이 생명입니다. 녹취록 내용 없이 AI가 가상의 대화 맥락을 '창작'하여 공문서로 생산하는 것은 감사 시 허위 공문서 작성 논란이 생길 수 있는 심각한 리스크이므로 녹취록, 대화요약, 위원별 발언 요지 등을 기재해 주시기 바랍니다.
                       </div>
                     </div>
 
@@ -1564,58 +1570,55 @@ ${writtenDate}
                       ></textarea>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 space-y-2.5 shadow-sm">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성일 기재 여부</label>
-                        <input
-                          type="checkbox"
-                          id="showWrittenDate"
-                          checked={showWrittenDate}
-                          onChange={(e) => setShowWrittenDate(e.target.checked)}
-                          className="w-3.5 h-3.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                        />
-                      </div>
-                      {showWrittenDate && (
-                        <input
-                          type="text"
-                          value={writtenDate}
-                          onChange={(e) => setWrittenDate(e.target.value)}
-                          placeholder="예: 2026년 06월 13일"
-                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold animate-in fade-in duration-200"
-                        />
-                      )}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1">회의록 작성일</label>
+                      <input
+                        type="text"
+                        value={writtenDate}
+                        onChange={(e) => setWrittenDate(e.target.value)}
+                        placeholder="예: 2026년 06월 13일"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold"
+                      />
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 space-y-2.5 shadow-sm">
+                    <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 기재 여부</label>
-                        <input
-                          type="checkbox"
-                          id="showSignatures"
-                          checked={!isSignaturesNA}
-                          onChange={(e) => {
-                            const nextNA = !e.target.checked;
+                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식)</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextNA = !isSignaturesNA;
                             setIsSignaturesNA(nextNA);
                             if (!nextNA) {
                               setIsSignaturesAuto(true);
                               setAttendeeSignatures(parseAttendeesToSignatures(attendees, chairperson));
                             }
                           }}
-                          className="w-3.5 h-3.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                        />
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border shadow-sm ${
+                            isSignaturesNA
+                              ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 active:scale-95'
+                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 active:scale-95'
+                          }`}
+                        >
+                          해당없음
+                        </button>
                       </div>
-                      {!isSignaturesNA && (
-                        <textarea
-                          value={attendeeSignatures}
-                          onChange={(e) => {
-                            setAttendeeSignatures(e.target.value);
-                            setIsSignaturesAuto(false);
-                          }}
-                          placeholder="예: 박소현(인), 이민우(인)"
-                          rows="2"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold text-slate-800 focus:bg-white animate-in fade-in duration-200"
-                        />
-                      )}
+                      <textarea
+                        value={isSignaturesNA ? '해당없음' : attendeeSignatures}
+                        onChange={(e) => {
+                          if (isSignaturesNA) return;
+                          setAttendeeSignatures(e.target.value);
+                          setIsSignaturesAuto(false);
+                        }}
+                        disabled={isSignaturesNA}
+                        placeholder="예: 박소현(인), 이민우(인)"
+                        rows="2"
+                        className={`w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold ${
+                          isSignaturesNA
+                            ? 'bg-slate-100 text-slate-400 border-slate-250 cursor-not-allowed'
+                            : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white'
+                        }`}
+                      />
                     </div>
 
                     {errorMessage && (
@@ -1728,10 +1731,6 @@ ${writtenDate}
                             <td colSpan="3" className="px-3 py-2.5 font-semibold">{dateTime} / {location}</td>
                           </tr>
                           <tr className="border-b border-slate-200">
-                            <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">진행 순서</td>
-                            <td colSpan="3" className="px-3 py-2.5 font-semibold">{meetingOrder}</td>
-                          </tr>
-                          <tr className="border-b border-slate-200">
                             <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">주관 부서</td>
                             <td className="px-3 py-2.5 border-r border-slate-200 font-semibold">{department}</td>
                             <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">위원장</td>
@@ -1786,7 +1785,7 @@ ${writtenDate}
                     </div>
 
                     {/* Section 2: Final Decisions */}
-                    <div className="mb-12">
+                    <div className="mb-8">
                       <h3 className="text-sm md:text-base font-extrabold text-slate-900 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wider flex items-center">
                         <span className="w-1 h-4 bg-indigo-600 rounded mr-2 inline-block"></span>
                         2. 최종 의결 및 결정사항
@@ -1807,7 +1806,7 @@ ${writtenDate}
 
                     {/* Section 3: Action Items */}
                     {!isActionNA && (
-                      <div className="mb-4">
+                      <div className="mb-12">
                         <h3 className="text-sm md:text-base font-extrabold text-slate-900 border-b border-slate-200 pb-2 mb-4 uppercase tracking-wider flex items-center">
                           <span className="w-1 h-4 bg-indigo-600 rounded mr-2 inline-block"></span>
                           3. 향후 조치 및 추진계획
@@ -1838,14 +1837,23 @@ ${writtenDate}
                     )}
 
                     {/* Signature block */}
-                    <div className="pt-0 mt-2 flex flex-col items-center w-full print-flex">
+                    <div className="border-t border-slate-300 pt-8 mt-12 flex flex-col items-center w-full print-flex">
                       {/* Written Date */}
-                      {showWrittenDate && writtenDate && (
+                      {writtenDate && (
                         <div className="text-sm text-slate-800 font-extrabold tracking-widest mb-6 text-center w-full">
                           {writtenDate}
                         </div>
                       )}
-
+                      
+                      {/* Chairperson & Secretary Signatures */}
+                      <div className="flex justify-center gap-16 mb-10 text-xs sm:text-sm font-bold w-full print-flex">
+                        <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                          {formatChairpersonSignature(chairperson)}
+                        </div>
+                        <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                          {formatSecretarySignature(attendees)}
+                        </div>
+                      </div>
 
                       {/* Attendee Signatures Grid */}
                       {!isSignaturesNA && attendeeSignatures && (
