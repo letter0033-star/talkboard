@@ -485,9 +485,11 @@
       const [writingMethod, setWritingMethod] = useState('conversational');
       const [rawTranscript, setRawTranscript] = useState('');
       const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem('local_minutes_written_date') || getCurrentDateString());
+      const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem('local_minutes_meeting_order') || '개회-경과보고-안건 심의 및 토론-폐회');
 
       // Attendee signatures states
       const [isSignaturesNA, setIsSignaturesNA] = useState(() => safeGetLocalItem('local_minutes_signatures_na') === 'true');
+      const [showWrittenDate, setShowWrittenDate] = useState(() => safeGetLocalItem('local_minutes_show_written_date') !== 'false');
       const [attendeeSignatures, setAttendeeSignatures] = useState(() => {
         const saved = safeGetLocalItem('local_minutes_attendee_signatures');
         if (saved) return saved;
@@ -641,10 +643,12 @@
           localStorage.setItem('local_minutes_department', department);
           localStorage.setItem('local_minutes_meeting_type', meetingType);
           localStorage.setItem('local_minutes_written_date', writtenDate);
+          localStorage.setItem('local_minutes_meeting_order', meetingOrder);
           
           localStorage.setItem('local_minutes_signatures_na', isSignaturesNA ? 'true' : 'false');
           localStorage.setItem('local_minutes_attendee_signatures', attendeeSignatures);
           localStorage.setItem('local_minutes_signatures_auto', isSignaturesAuto ? 'true' : 'false');
+          localStorage.setItem('local_minutes_show_written_date', showWrittenDate ? 'true' : 'false');
 
           setIsRemembered(true);
           showToastMsg('기본 정보 및 회의 사항이 PC(로컬 저장소)에 안전하게 저장되었습니다.', 'success');
@@ -668,13 +672,17 @@
           localStorage.removeItem('local_minutes_department');
           localStorage.removeItem('local_minutes_meeting_type');
           localStorage.removeItem('local_minutes_written_date');
+          localStorage.removeItem('local_minutes_meeting_order');
 
           localStorage.removeItem('local_minutes_signatures_na');
           localStorage.removeItem('local_minutes_attendee_signatures');
           localStorage.removeItem('local_minutes_signatures_auto');
+          localStorage.removeItem('local_minutes_show_written_date');
 
           setIsSignaturesNA(false);
           setIsSignaturesAuto(true);
+          setShowWrittenDate(true);
+          setMeetingOrder('개회-경과보고-안건 심의 및 토론-폐회');
           const parsedAtts = parseAttendeesToSignatures(attendees, chairperson);
           setAttendeeSignatures(parsedAtts);
 
@@ -701,6 +709,7 @@
             setDepartment(t.department);
             setMeetingType(t.meetingType);
             setWrittenDate(getCurrentDateString());
+            setMeetingOrder(t.meetingOrder || '개회-경과보고-안건 심의 및 토론-폐회');
           }
           setAgendas(t.agendas);
           const mappedDecisions = (t.decisions || []).map(dec => {
@@ -974,6 +983,7 @@ ${generatedMinutes}
 위원장 직위 / 성함: ${chairperson}
 회의명: ${meetingName}
 회의목적: ${meetingPurpose}
+회의 진행 순서: ${meetingOrder}
 개최일시: ${dateTime}
 장소: ${location}
 내부 참석 위원: ${attendees}
@@ -1023,6 +1033,7 @@ ${isActionNA ? "해당사항 없음 (별도의 후속 추진계획이 없음)" :
 [회의 개요]
 - 회 의 명  : ${meetingName}
 - 회의 목적 : ${meetingPurpose}
+- 진행 순서 : ${meetingOrder}
 - 개최 일시 : ${dateTime}
 - 개최 장소 : ${location}
 - 주관 부서 : ${department}
@@ -1055,12 +1066,12 @@ ${isActionNA ? "  해당사항 없음 (추진 과제 및 계획 없음)" : futur
   - 담당자 : ${f.owner}
   - 기  한 : ${f.deadline}`).join('\n\n')}
 
+${(showWrittenDate || !isSignaturesNA) ? `
 =============================================
 상기 기록이 틀림없음을 확인하며, 이에 서명함.
-${writtenDate}
-위원장 : ${chairperson}  (인)
+${showWrittenDate ? `${writtenDate}\n` : ''}위원장 : ${chairperson}  (인)
 간  사 :                       (인)
-=============================================
+${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n${attendeeSignatures.split(',').map(s => s.trim()).filter(Boolean).map(s => ` - ${s}`).join('\n')}\n` : ''}=============================================` : ''}
 `;
         const blob = new Blob([metaTable], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -1232,6 +1243,11 @@ ${writtenDate}
                       <div>
                         <label className="block text-[10px] font-bold text-slate-400 mb-1">회의 목적</label>
                         <textarea value={meetingPurpose} onChange={(e) => setMeetingPurpose(e.target.value)} rows="2" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm resize-none"></textarea>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">회의 진행 순서</label>
+                        <input type="text" value={meetingOrder} onChange={(e) => setMeetingOrder(e.target.value)} placeholder="예: 개회-경과보고-안건 심의 및 토론-폐회" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold" />
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -1570,41 +1586,57 @@ ${writtenDate}
                       ></textarea>
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1">회의록 작성일</label>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성일</label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            id="showWrittenDate"
+                            checked={showWrittenDate}
+                            onChange={(e) => setShowWrittenDate(e.target.checked)}
+                            className="w-3.5 h-3.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <label htmlFor="showWrittenDate" className="text-[10px] font-bold text-slate-500 cursor-pointer select-none">문서에 표시</label>
+                        </div>
+                      </div>
                       <input
                         type="text"
                         value={writtenDate}
                         onChange={(e) => setWrittenDate(e.target.value)}
+                        disabled={!showWrittenDate}
                         placeholder="예: 2026년 06월 13일"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold"
+                        className={`w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm font-semibold ${
+                          !showWrittenDate
+                            ? 'bg-slate-100 text-slate-400 border-slate-250 cursor-not-allowed'
+                            : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white'
+                        }`}
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
                         <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식)</label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextNA = !isSignaturesNA;
-                            setIsSignaturesNA(nextNA);
-                            if (!nextNA) {
-                              setIsSignaturesAuto(true);
-                              setAttendeeSignatures(parseAttendeesToSignatures(attendees, chairperson));
-                            }
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all border shadow-sm ${
-                            isSignaturesNA
-                              ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 active:scale-95'
-                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 active:scale-95'
-                          }`}
-                        >
-                          해당없음
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            id="showAttendeeSignatures"
+                            checked={!isSignaturesNA}
+                            onChange={(e) => {
+                              const nextShow = e.target.checked;
+                              setIsSignaturesNA(!nextShow);
+                              if (nextShow) {
+                                setIsSignaturesAuto(true);
+                                setAttendeeSignatures(parseAttendeesToSignatures(attendees, chairperson));
+                              }
+                            }}
+                            className="w-3.5 h-3.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <label htmlFor="showAttendeeSignatures" className="text-[10px] font-bold text-slate-500 cursor-pointer select-none">문서에 표시</label>
+                        </div>
                       </div>
                       <textarea
-                        value={isSignaturesNA ? '해당없음' : attendeeSignatures}
+                        value={isSignaturesNA ? '해당없음 (표시 안 함)' : attendeeSignatures}
                         onChange={(e) => {
                           if (isSignaturesNA) return;
                           setAttendeeSignatures(e.target.value);
@@ -1731,6 +1763,10 @@ ${writtenDate}
                             <td colSpan="3" className="px-3 py-2.5 font-semibold">{dateTime} / {location}</td>
                           </tr>
                           <tr className="border-b border-slate-200">
+                            <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">진행 순서</td>
+                            <td colSpan="3" className="px-3 py-2.5 leading-relaxed font-semibold">{meetingOrder}</td>
+                          </tr>
+                          <tr className="border-b border-slate-200">
                             <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">주관 부서</td>
                             <td className="px-3 py-2.5 border-r border-slate-200 font-semibold">{department}</td>
                             <td className="bg-slate-50 font-bold text-slate-700 px-3 py-2.5 text-center border-r border-slate-200">위원장</td>
@@ -1837,42 +1873,44 @@ ${writtenDate}
                     )}
 
                     {/* Signature block */}
-                    <div className="border-t border-slate-300 pt-8 mt-12 flex flex-col items-center w-full print-flex">
-                      {/* Written Date */}
-                      {writtenDate && (
-                        <div className="text-sm text-slate-800 font-extrabold tracking-widest mb-6 text-center w-full">
-                          {writtenDate}
-                        </div>
-                      )}
-                      
-                      {/* Chairperson & Secretary Signatures */}
-                      <div className="flex justify-center gap-16 mb-10 text-xs sm:text-sm font-bold w-full print-flex">
-                        <div className="border-b border-slate-300 pb-1 w-44 text-center">
-                          {formatChairpersonSignature(chairperson)}
-                        </div>
-                        <div className="border-b border-slate-300 pb-1 w-44 text-center">
-                          {formatSecretarySignature(attendees)}
-                        </div>
-                      </div>
-
-                      {/* Attendee Signatures Grid */}
-                      {!isSignaturesNA && attendeeSignatures && (
-                        <div className="w-full max-w-2xl border-t border-dashed border-slate-200 pt-6">
-                          <p className="text-[11px] text-slate-400 font-bold mb-5 text-center tracking-widest uppercase">참석위원 서명 및 날인</p>
-                          <div className="grid grid-cols-5 gap-y-5 gap-x-6 px-2 print-grid">
-                            {attendeeSignatures.split(',').map((item, idx) => {
-                              const nameAndIn = item.trim();
-                              if (!nameAndIn) return null;
-                              return (
-                                <div key={idx} className="border-b border-slate-200 pb-1 h-8 flex items-end justify-center print-flex">
-                                  <span className="text-xs font-semibold text-slate-850">{nameAndIn}</span>
-                                </div>
-                              );
-                            })}
+                    {(showWrittenDate || !isSignaturesNA) && (
+                      <div className="border-t border-slate-300 pt-8 mt-12 flex flex-col items-center w-full print-flex">
+                        {/* Written Date */}
+                        {showWrittenDate && writtenDate && (
+                          <div className="text-sm text-slate-800 font-extrabold tracking-widest mb-6 text-center w-full">
+                            {writtenDate}
+                          </div>
+                        )}
+                        
+                        {/* Chairperson & Secretary Signatures */}
+                        <div className="flex justify-center gap-16 mb-10 text-xs sm:text-sm font-bold w-full print-flex">
+                          <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                            {formatChairpersonSignature(chairperson)}
+                          </div>
+                          <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                            {formatSecretarySignature(attendees)}
                           </div>
                         </div>
-                      )}
-                    </div>
+
+                        {/* Attendee Signatures Grid */}
+                        {!isSignaturesNA && attendeeSignatures && (
+                          <div className="w-full max-w-2xl border-t border-dashed border-slate-200 pt-6">
+                            <p className="text-[11px] text-slate-400 font-bold mb-5 text-center tracking-widest uppercase">참석위원 서명 및 날인</p>
+                            <div className="grid grid-cols-5 gap-y-5 gap-x-6 px-2 print-grid">
+                              {attendeeSignatures.split(',').map((item, idx) => {
+                                const nameAndIn = item.trim();
+                                if (!nameAndIn) return null;
+                                return (
+                                  <div key={idx} className="border-b border-slate-200 pb-1 h-8 flex items-end justify-center print-flex">
+                                    <span className="text-xs font-semibold text-slate-850">{nameAndIn}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
