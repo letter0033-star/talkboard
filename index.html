@@ -1569,7 +1569,7 @@ ${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n$
                       <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                       <div className="text-[10.5px] sm:text-[11px] leading-relaxed font-semibold">
                         <strong className="text-amber-900 font-extrabold">[주의] </strong>
-                        공공기록물은 '사실성(Fact)'이 생명입니다. 녹취록 내용 없이 AI가 가상의 대화 맥락을 '창작'하여 공문서로 생산하는 것은 감사 시 허위 공문서 작성 논란이 생길 수 있는 심각한 리스크이므로 녹취록, 대화요약, 위원별 발언 요지 등을 기재해 주시기 바랍니다.
+                        공공기록물은 '사실성(Fact)'이 생명입니다. 녹취록 내용 없이 AI가 가상의 대화 맥락을 '창작'하여 공문서로 생산하는 것은 감사 시 허위 공문서 작성 논란이 생길 수 있는 심각한 리스크이므로 <span className="text-rose-700 font-extrabold">전체 녹취내용이 아니더라도 대화요약, 위원별 발언 요지 등을 기재해 주시기 바랍니다.</span>
                       </div>
                     </div>
 
@@ -1588,7 +1588,7 @@ ${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n$
 
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성일: 필수 기재사항 아님</label>
+                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성일: 필수 기재사항은 아님. <span className="text-rose-600 font-extrabold">다만 학업성적관리위원회 회의록은 회의록 작성 후 위원 확인 필수임.</span></label>
                         <div className="flex items-center gap-1">
                           <input
                             type="checkbox"
@@ -1616,7 +1616,7 @@ ${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n$
 
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식): 필수 기재사항 아님</label>
+                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식): 필수 기재사항은 아님. <span className="text-rose-600 font-extrabold">다만 학업성적관리위원회 회의록은 회의록 작성 후 위원 확인 필수임.</span></label>
                         <div className="flex items-center gap-1">
                           <input
                             type="checkbox"
