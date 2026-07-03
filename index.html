@@ -486,6 +486,7 @@
       const [rawTranscript, setRawTranscript] = useState('');
       const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem('local_minutes_written_date') || getCurrentDateString());
       const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem('local_minutes_meeting_order') || '개회-경과보고-안건 심의 및 토론-폐회');
+      const [audioFile, setAudioFile] = useState(null);
 
       // Attendee signatures states
       const [isSignaturesNA, setIsSignaturesNA] = useState(() => safeGetLocalItem('local_minutes_signatures_na') === 'true');
@@ -534,6 +535,35 @@
       const [activeTab, setActiveTab] = useState('basic');
       const [rightTab, setRightTab] = useState('preview'); // 'preview' or 'aiChat'
       const [formalMode, setFormalMode] = useState(true);
+
+      const handleAudioFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Check file size (20MB limit)
+        const sizeLimit = 20 * 1024 * 1024;
+        if (file.size > sizeLimit) {
+          showToastMsg('오디오 파일 크기는 최대 20MB까지만 업로드 가능합니다.', 'error');
+          e.target.value = null;
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Data = reader.result.split(',')[1];
+          setAudioFile({
+            name: file.name,
+            size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+            mimeType: file.type || 'audio/mp3',
+            base64Data: base64Data
+          });
+          showToastMsg('오디오 파일이 업로드되었습니다.', 'success');
+        };
+        reader.onerror = () => {
+          showToastMsg('오디오 파일을 읽는 도중 오류가 발생했습니다.', 'error');
+        };
+        reader.readAsDataURL(file);
+      };
 
       // Embedded Markdown Renderer
       const renderMarkdown = (text) => {
@@ -854,7 +884,7 @@ ${decisions.map((de, i) => {
 ${isActionNA ? "향후 추진 조치 필요성 없음" : futureActions.map((fa) => `- 과제: ${fa.task} (담당: ${fa.owner}, 기한: ${fa.deadline})`).join('\n')}
 
 [회의록 초안 / 대화 녹취록]
-${rawTranscript || "초안 및 녹취록이 비어있습니다. 안건과 결정사항을 기반으로 정합성 있는 가상의 논의 맥락을 형성해 상세 작성해주십시오."}
+${rawTranscript || (audioFile ? "오디오 파일이 함께 제공되었습니다. 동봉된 오디오 파일의 회의 내용을 분석/받아쓰기하여 회의록에 적극 반영해 주십시오." : "초안 및 녹취록이 비어있습니다. 안건과 결정사항을 기반으로 정합성 있는 가상의 논의 맥락을 형성해 상세 작성해주십시오.")}
 
 위의 데이터를 토대로 선택된 기법 [${
           writingMethod === 'conversational' ? '대화체' : 
@@ -862,8 +892,19 @@ ${rawTranscript || "초안 및 녹취록이 비어있습니다. 안건과 결정
           writingMethod === 'agendaNarrative' ? '안건별 서술형' : '결정사항 중심형'
         }] 에 최적화된 고품질 회의록 본문을 생성해주세요.`;
 
+        const requestParts = [];
+        if (audioFile && audioFile.base64Data) {
+          requestParts.push({
+            inlineData: {
+              mimeType: audioFile.mimeType,
+              data: audioFile.base64Data
+            }
+          });
+        }
+        requestParts.push({ text: userQuery });
+
         const payload = {
-          contents: [{ parts: [{ text: userQuery }] }],
+          contents: [{ parts: requestParts }],
           systemInstruction: { parts: [{ text: systemPrompt }] }
         };
 
@@ -1584,6 +1625,44 @@ ${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n$
                         placeholder="이곳에 회의 중 기록한 대화나 음성 인식으로 추출된 발언 텍스트를 붙여넣으세요. 비어있을 경우, 안건과 결정사항을 기반으로 AI가 정합성 있는 논의 과정을 가상으로 구성하여 완성해 줍니다."
                         className="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all resize-none leading-relaxed"
                       ></textarea>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[10px] font-bold text-slate-400">회의 녹음 오디오 파일 첨부 (선택)</label>
+                        <span className="text-[9px] text-slate-400 font-bold">지원: mp3, wav, m4a, wma, amr, webm 등</span>
+                      </div>
+                      <div className="flex gap-2 items-center bg-slate-50 border border-slate-200 rounded-xl p-2.5 shadow-sm">
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={handleAudioFileChange}
+                          className="hidden"
+                          id="audio-upload-input"
+                        />
+                        <label
+                          htmlFor="audio-upload-input"
+                          className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-all cursor-pointer border border-indigo-200/40"
+                        >
+                          파일 선택
+                        </label>
+                        <div className="flex-1 min-w-0">
+                          {audioFile ? (
+                            <div className="flex justify-between items-center bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
+                              <span className="truncate font-semibold text-slate-800" title={audioFile.name}>{audioFile.name} ({audioFile.size})</span>
+                              <button
+                                type="button"
+                                onClick={() => setAudioFile(null)}
+                                className="text-rose-600 font-extrabold ml-2 hover:text-rose-800"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 pl-1 block">선택된 오디오 파일이 없습니다. (최대 20MB)</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
