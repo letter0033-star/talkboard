@@ -470,40 +470,43 @@
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
       };
 
+      const initialTemplate = safeGetLocalItem('local_minutes_active_template') || 'edu_committee';
+      const [activeTemplate, setActiveTemplate] = useState(initialTemplate);
+
       // Core Form States
-      const [orgType, setOrgType] = useState(() => safeGetLocalItem('local_minutes_org_type') || '교육기관(초중고/대학)');
-      const [orgName, setOrgName] = useState(() => safeGetLocalItem('local_minutes_org_name') || '늘푸른초등학교');
-      const [chairperson, setChairperson] = useState(() => safeGetLocalItem('local_minutes_chairperson') || '교감 김지훈');
-      const [meetingName, setMeetingName] = useState(() => safeGetLocalItem('local_minutes_meeting_name') || '제5차 교원인사자문위원회 회의');
-      const [meetingPurpose, setMeetingPurpose] = useState(() => safeGetLocalItem('local_minutes_meeting_purpose') || '2026학년도 부서배정 및 신규임용 교사 업무분장, 학교폭력 유공교원 가산점 심사');
-      const [dateTime, setDateTime] = useState(() => safeGetLocalItem('local_minutes_date_time') || getCurrentDateTimeString());
-      const [location, setLocation] = useState(() => safeGetLocalItem('local_minutes_location') || '늘푸른초등학교 교무실');
-      const [attendees, setAttendees] = useState(() => safeGetLocalItem('local_minutes_attendees') || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)');
-      const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem('local_minutes_external_attendees') || '이영희(학교운영위원장), 박진아(학부모회장)');
-      const [department, setDepartment] = useState(() => safeGetLocalItem('local_minutes_department') || '교무기획부');
-      const [meetingType, setMeetingType] = useState(() => safeGetLocalItem('local_minutes_meeting_type') || '임시');
+      const [orgType, setOrgType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_org_type`) || '교육기관(초중고/대학)');
+      const [orgName, setOrgName] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_org_name`) || '늘푸른초등학교');
+      const [chairperson, setChairperson] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_chairperson`) || '교감 김지훈');
+      const [meetingName, setMeetingName] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_name`) || '제5차 교원인사자문위원회 회의');
+      const [meetingPurpose, setMeetingPurpose] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_purpose`) || '2026학년도 부서배정 및 신규임용 교사 업무분장, 학교폭력 유공교원 가산점 심사');
+      const [dateTime, setDateTime] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_date_time`) || getCurrentDateTimeString());
+      const [location, setLocation] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_location`) || '늘푸른초등학교 교무실');
+      const [attendees, setAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_attendees`) || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)');
+      const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_external_attendees`) || '이영희(학교운영위원장), 박진아(학부모회장)');
+      const [department, setDepartment] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_department`) || '교무기획부');
+      const [meetingType, setMeetingType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_type`) || '임시');
       const [writingMethod, setWritingMethod] = useState('conversational');
       const [rawTranscript, setRawTranscript] = useState('');
-      const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem('local_minutes_written_date') || getCurrentDateString());
-      const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem('local_minutes_meeting_order') || '개회-경과보고-안건 심의 및 토론-폐회');
+      const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_written_date`) || getCurrentDateString());
+      const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_order`) || '개회-경과보고-안건 심의 및 토론-폐회');
       const [audioFile, setAudioFile] = useState(null);
 
       // Attendee signatures states
-      const [isSignaturesNA, setIsSignaturesNA] = useState(() => safeGetLocalItem('local_minutes_signatures_na') === 'true');
-      const [showWrittenDate, setShowWrittenDate] = useState(() => safeGetLocalItem('local_minutes_show_written_date') !== 'false');
+      const [isSignaturesNA, setIsSignaturesNA] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_signatures_na`) === 'true');
+      const [showWrittenDate, setShowWrittenDate] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_show_written_date`) !== 'false');
       const [attendeeSignatures, setAttendeeSignatures] = useState(() => {
-        const saved = safeGetLocalItem('local_minutes_attendee_signatures');
+        const saved = safeGetLocalItem(`local_minutes_${initialTemplate}_attendee_signatures`);
         if (saved) return saved;
-        const defaultAttendees = safeGetLocalItem('local_minutes_attendees') || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)';
-        const defaultChair = safeGetLocalItem('local_minutes_chairperson') || '교감 김지훈';
+        const defaultAttendees = safeGetLocalItem(`local_minutes_${initialTemplate}_attendees`) || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)';
+        const defaultChair = safeGetLocalItem(`local_minutes_${initialTemplate}_chairperson`) || '교감 김지훈';
         return parseAttendeesToSignatures(defaultAttendees, defaultChair);
       });
       const [isSignaturesAuto, setIsSignaturesAuto] = useState(() => {
-        const savedAuto = safeGetLocalItem('local_minutes_signatures_auto');
+        const savedAuto = safeGetLocalItem(`local_minutes_${initialTemplate}_signatures_auto`);
         return savedAuto === '' ? true : savedAuto === 'true';
       });
 
-      const [isRemembered, setIsRemembered] = useState(() => safeGetLocalItem('local_minutes_saved') === 'true');
+      const [isRemembered, setIsRemembered] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_saved`) === 'true');
       const [isSaving, setIsSaving] = useState(false);
 
       // Lists State
@@ -644,10 +647,7 @@
 
       // --- PERSISTENCE: LOCAL STORAGE INITIAL LOAD ---
       useEffect(() => {
-        const hasSaved = safeGetLocalItem('local_minutes_saved') === 'true';
-        if (!hasSaved) {
-          loadTemplate('edu_committee');
-        }
+        loadTemplate(initialTemplate);
       }, []);
 
       // Sync attendees to signatures if auto-sync is on (chairperson and secretary excluded)
@@ -660,25 +660,25 @@
 
       const saveBasicInfoToLocal = () => {
         try {
-          localStorage.setItem('local_minutes_saved', 'true');
-          localStorage.setItem('local_minutes_org_type', orgType);
-          localStorage.setItem('local_minutes_org_name', orgName);
-          localStorage.setItem('local_minutes_chairperson', chairperson);
-          localStorage.setItem('local_minutes_attendees', attendees);
-          localStorage.setItem('local_minutes_external_attendees', externalAttendees);
-          localStorage.setItem('local_minutes_meeting_name', meetingName);
-          localStorage.setItem('local_minutes_meeting_purpose', meetingPurpose);
-          localStorage.setItem('local_minutes_date_time', dateTime);
-          localStorage.setItem('local_minutes_location', location);
-          localStorage.setItem('local_minutes_department', department);
-          localStorage.setItem('local_minutes_meeting_type', meetingType);
-          localStorage.setItem('local_minutes_written_date', writtenDate);
-          localStorage.setItem('local_minutes_meeting_order', meetingOrder);
+          localStorage.setItem(`local_minutes_${activeTemplate}_saved`, 'true');
+          localStorage.setItem(`local_minutes_${activeTemplate}_org_type`, orgType);
+          localStorage.setItem(`local_minutes_${activeTemplate}_org_name`, orgName);
+          localStorage.setItem(`local_minutes_${activeTemplate}_chairperson`, chairperson);
+          localStorage.setItem(`local_minutes_${activeTemplate}_attendees`, attendees);
+          localStorage.setItem(`local_minutes_${activeTemplate}_external_attendees`, externalAttendees);
+          localStorage.setItem(`local_minutes_${activeTemplate}_meeting_name`, meetingName);
+          localStorage.setItem(`local_minutes_${activeTemplate}_meeting_purpose`, meetingPurpose);
+          localStorage.setItem(`local_minutes_${activeTemplate}_date_time`, dateTime);
+          localStorage.setItem(`local_minutes_${activeTemplate}_location`, location);
+          localStorage.setItem(`local_minutes_${activeTemplate}_department`, department);
+          localStorage.setItem(`local_minutes_${activeTemplate}_meeting_type`, meetingType);
+          localStorage.setItem(`local_minutes_${activeTemplate}_written_date`, writtenDate);
+          localStorage.setItem(`local_minutes_${activeTemplate}_meeting_order`, meetingOrder);
           
-          localStorage.setItem('local_minutes_signatures_na', isSignaturesNA ? 'true' : 'false');
-          localStorage.setItem('local_minutes_attendee_signatures', attendeeSignatures);
-          localStorage.setItem('local_minutes_signatures_auto', isSignaturesAuto ? 'true' : 'false');
-          localStorage.setItem('local_minutes_show_written_date', showWrittenDate ? 'true' : 'false');
+          localStorage.setItem(`local_minutes_${activeTemplate}_signatures_na`, isSignaturesNA ? 'true' : 'false');
+          localStorage.setItem(`local_minutes_${activeTemplate}_attendee_signatures`, attendeeSignatures);
+          localStorage.setItem(`local_minutes_${activeTemplate}_signatures_auto`, isSignaturesAuto ? 'true' : 'false');
+          localStorage.setItem(`local_minutes_${activeTemplate}_show_written_date`, showWrittenDate ? 'true' : 'false');
 
           setIsRemembered(true);
           showToastMsg('기본 정보 및 회의 사항이 PC(로컬 저장소)에 안전하게 저장되었습니다.', 'success');
@@ -689,44 +689,33 @@
 
       const clearBasicInfoFromLocal = () => {
         try {
-          localStorage.removeItem('local_minutes_saved');
-          localStorage.removeItem('local_minutes_org_type');
-          localStorage.removeItem('local_minutes_org_name');
-          localStorage.removeItem('local_minutes_chairperson');
-          localStorage.removeItem('local_minutes_attendees');
-          localStorage.removeItem('local_minutes_external_attendees');
-          localStorage.removeItem('local_minutes_meeting_name');
-          localStorage.removeItem('local_minutes_meeting_purpose');
-          localStorage.removeItem('local_minutes_date_time');
-          localStorage.removeItem('local_minutes_location');
-          localStorage.removeItem('local_minutes_department');
-          localStorage.removeItem('local_minutes_meeting_type');
-          localStorage.removeItem('local_minutes_written_date');
-          localStorage.removeItem('local_minutes_meeting_order');
+          localStorage.removeItem(`local_minutes_${activeTemplate}_saved`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_org_type`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_org_name`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_chairperson`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_attendees`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_external_attendees`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_meeting_name`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_meeting_purpose`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_date_time`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_location`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_department`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_meeting_type`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_written_date`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_meeting_order`);
 
-          localStorage.removeItem('local_minutes_signatures_na');
-          localStorage.removeItem('local_minutes_attendee_signatures');
-          localStorage.removeItem('local_minutes_signatures_auto');
-          localStorage.removeItem('local_minutes_show_written_date');
+          localStorage.removeItem(`local_minutes_${activeTemplate}_signatures_na`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_attendee_signatures`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_signatures_auto`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_show_written_date`);
 
           setIsSignaturesNA(false);
           setIsSignaturesAuto(true);
           setShowWrittenDate(true);
           setMeetingOrder('개회-경과보고-안건 심의 및 토론-폐회');
-          const parsedAtts = parseAttendeesToSignatures(attendees, chairperson);
-          setAttendeeSignatures(parsedAtts);
-
-          setIsRemembered(false);
-          showToastMsg('저장된 기본 정보 및 회의 사항이 PC에서 삭제되었습니다.', 'success');
-        } catch (e) {
-          showToastMsg('기본 정보 삭제에 실패했습니다.', 'error');
-        }
-      };
-
-      const loadTemplate = (key) => {
-        const t = MEETING_TEMPLATES[key];
-        if (t) {
-          if (!isRemembered) {
+          
+          const t = MEETING_TEMPLATES[activeTemplate];
+          if (t) {
             setOrgType(t.orgType);
             setOrgName(t.orgName);
             setChairperson(t.chairperson);
@@ -740,7 +729,65 @@
             setMeetingType(t.meetingType);
             setWrittenDate(getCurrentDateString());
             setMeetingOrder(t.meetingOrder || '개회-경과보고-안건 심의 및 토론-폐회');
+            setAttendeeSignatures(parseAttendeesToSignatures(t.attendees, t.chairperson));
           }
+
+          setIsRemembered(false);
+          showToastMsg('저장된 기본 정보 및 회의 사항이 PC에서 삭제되었습니다.', 'success');
+        } catch (e) {
+          showToastMsg('기본 정보 삭제에 실패했습니다.', 'error');
+        }
+      };
+
+      const loadTemplate = (key) => {
+        const t = MEETING_TEMPLATES[key];
+        if (t) {
+          setActiveTemplate(key);
+          localStorage.setItem('local_minutes_active_template', key);
+
+          const hasSaved = safeGetLocalItem(`local_minutes_${key}_saved`) === 'true';
+          setIsRemembered(hasSaved);
+
+          if (hasSaved) {
+            setOrgType(safeGetLocalItem(`local_minutes_${key}_org_type`) || t.orgType);
+            setOrgName(safeGetLocalItem(`local_minutes_${key}_org_name`) || t.orgName);
+            setChairperson(safeGetLocalItem(`local_minutes_${key}_chairperson`) || t.chairperson);
+            setAttendees(safeGetLocalItem(`local_minutes_${key}_attendees`) || t.attendees);
+            setExternalAttendees(safeGetLocalItem(`local_minutes_${key}_external_attendees`) || t.externalAttendees || "");
+            setMeetingName(safeGetLocalItem(`local_minutes_${key}_meeting_name`) || t.meetingName);
+            setMeetingPurpose(safeGetLocalItem(`local_minutes_${key}_meeting_purpose`) || t.meetingPurpose);
+            setDateTime(safeGetLocalItem(`local_minutes_${key}_date_time`) || getCurrentDateTimeString());
+            setLocation(safeGetLocalItem(`local_minutes_${key}_location`) || t.location);
+            setDepartment(safeGetLocalItem(`local_minutes_${key}_department`) || t.department);
+            setMeetingType(safeGetLocalItem(`local_minutes_${key}_meeting_type`) || t.meetingType);
+            setWrittenDate(safeGetLocalItem(`local_minutes_${key}_written_date`) || getCurrentDateString());
+            setMeetingOrder(safeGetLocalItem(`local_minutes_${key}_meeting_order`) || t.meetingOrder || '개회-경과보고-안건 심의 및 토론-폐회');
+            
+            setIsSignaturesNA(safeGetLocalItem(`local_minutes_${key}_signatures_na`) === 'true');
+            setAttendeeSignatures(safeGetLocalItem(`local_minutes_${key}_attendee_signatures`) || parseAttendeesToSignatures(t.attendees, t.chairperson));
+            setIsSignaturesAuto(safeGetLocalItem(`local_minutes_${key}_signatures_auto`) !== 'false');
+            setShowWrittenDate(safeGetLocalItem(`local_minutes_${key}_show_written_date`) !== 'false');
+          } else {
+            setOrgType(t.orgType);
+            setOrgName(t.orgName);
+            setChairperson(t.chairperson);
+            setAttendees(t.attendees);
+            setExternalAttendees(t.externalAttendees || "");
+            setMeetingName(t.meetingName);
+            setMeetingPurpose(t.meetingPurpose);
+            setDateTime(getCurrentDateTimeString());
+            setLocation(t.location);
+            setDepartment(t.department);
+            setMeetingType(t.meetingType);
+            setWrittenDate(getCurrentDateString());
+            setMeetingOrder(t.meetingOrder || '개회-경과보고-안건 심의 및 토론-폐회');
+
+            setIsSignaturesNA(false);
+            setIsSignaturesAuto(true);
+            setShowWrittenDate(true);
+            setAttendeeSignatures(parseAttendeesToSignatures(t.attendees, t.chairperson));
+          }
+
           setAgendas(t.agendas);
           const mappedDecisions = (t.decisions || []).map(dec => {
             if (typeof dec === 'string') {
@@ -756,13 +803,6 @@
           setGeneratedMinutes('');
           setErrorMessage('');
           setChatLog([]);
-
-          setIsSignaturesNA(false);
-          setIsSignaturesAuto(true);
-          const targetChairperson = isRemembered ? chairperson : t.chairperson;
-          const targetAttendees = isRemembered ? attendees : t.attendees;
-          const parsedAtts = parseAttendeesToSignatures(targetAttendees, targetChairperson);
-          setAttendeeSignatures(parsedAtts);
 
           showToastMsg(`'${t.title}' 실무 템플릿이 안전하게 구성되었습니다.`, 'success');
         }
@@ -1109,10 +1149,7 @@ ${isActionNA ? "  해당사항 없음 (추진 과제 및 계획 없음)" : futur
 
 ${(showWrittenDate || !isSignaturesNA) ? `
 =============================================
-상기 기록이 틀림없음을 확인하며, 이에 서명함.
-${showWrittenDate ? `${writtenDate}\n` : ''}위원장 : ${chairperson}  (인)
-간  사 :                       (인)
-${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n${attendeeSignatures.split(',').map(s => s.trim()).filter(Boolean).map(s => ` - ${s}`).join('\n')}\n` : ''}=============================================` : ''}
+${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서명함.\n' : ''}${showWrittenDate ? `${writtenDate}\n` : ''}${!isSignaturesNA ? `위원장 : ${chairperson}  (인)\n간  사 :                       (인)\n` : ''}${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n${attendeeSignatures.split(',').map(s => s.trim()).filter(Boolean).map(s => ` - ${s}`).join('\n')}\n` : ''}=============================================` : ''}
 `;
         const blob = new Blob([metaTable], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -1962,14 +1999,16 @@ ${!isSignaturesNA && attendeeSignatures ? `\n[참석위원 서명 및 날인]\n$
                         )}
                         
                         {/* Chairperson & Secretary Signatures */}
-                        <div className="flex justify-center gap-16 mb-10 text-xs sm:text-sm font-bold w-full print-flex">
-                          <div className="border-b border-slate-300 pb-1 w-44 text-center">
-                            {formatChairpersonSignature(chairperson)}
+                        {!isSignaturesNA && (
+                          <div className="flex justify-center gap-16 mb-10 text-xs sm:text-sm font-bold w-full print-flex">
+                            <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                              {formatChairpersonSignature(chairperson)}
+                            </div>
+                            <div className="border-b border-slate-300 pb-1 w-44 text-center">
+                              {formatSecretarySignature(attendees)}
+                            </div>
                           </div>
-                          <div className="border-b border-slate-300 pb-1 w-44 text-center">
-                            {formatSecretarySignature(attendees)}
-                          </div>
-                        </div>
+                        )}
 
                         {/* Attendee Signatures Grid */}
                         {!isSignaturesNA && attendeeSignatures && (
