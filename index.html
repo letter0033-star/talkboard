@@ -507,27 +507,46 @@
       });
 
       const [isRemembered, setIsRemembered] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_saved`) === 'true');
+      const [isAgendasRemembered, setIsAgendasRemembered] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_agendas_saved`) === 'true');
       const [isSaving, setIsSaving] = useState(false);
 
       // Lists State
-      const [agendas, setAgendas] = useState([
-        '2026학년도 학급 담임 및 부서 배정 우선 배정자 선정 건',
-        '병설유치원 시간제근무 기간제교사 및 교육공무직 업무 분배 조정 건',
-        '학교폭력 예방 및 해결 기여 교원 승진 가산점 대상자 심사기준 수립 건'
-      ]);
+      const [agendas, setAgendas] = useState(() => {
+        const saved = safeGetLocalItem(`local_minutes_${initialTemplate}_agendas`);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
+        return [
+          '2026학년도 학급 담임 및 부서 배정 우선 배정자 선정 건',
+          '병설유치원 시간제근무 기간제교사 및 교육공무직 업무 분배 조정 건',
+          '학교폭력 예방 및 해결 기여 교원 승진 가산점 대상자 심사기준 수립 건'
+        ];
+      });
 
-      const [decisions, setDecisions] = useState([
-        { text: '관내 전입 및 3년 이상 장기 근속 교사 대상 우선 선택권 보장 기준 확정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
-        { text: '병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
-        { text: '학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 }
-      ]);
+      const [decisions, setDecisions] = useState(() => {
+        const saved = safeGetLocalItem(`local_minutes_${initialTemplate}_decisions`);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
+        return [
+          { text: '관내 전입 및 3년 이상 장기 근속 교사 대상 우선 선택권 보장 기준 확정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
+          { text: '병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
+          { text: '학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 }
+        ];
+      });
 
-      const [isActionNA, setIsActionNA] = useState(false);
-      const [futureActions, setFutureActions] = useState([
-        { task: '우선 배정 대상자 서류 취합 및 희망원 접수 안내', owner: '정선아 교사', deadline: '2026-12-05' },
-        { task: '유치원 방과후과정 업무 세부 분장안 공람 및 내부결재', owner: '최지은 교사', deadline: '2026-11-30' },
-        { task: '학교폭력 가산점 공고 및 정량 평정 양식 배포', owner: '이민우 교사', deadline: '2026-12-10' }
-      ]);
+      const [isActionNA, setIsActionNA] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_is_action_na`) === 'true');
+      const [futureActions, setFutureActions] = useState(() => {
+        const saved = safeGetLocalItem(`local_minutes_${initialTemplate}_future_actions`);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
+        return [
+          { task: '우선 배정 대상자 서류 취합 및 희망원 접수 안내', owner: '정선아 교사', deadline: '2026-12-05' },
+          { task: '유치원 방과후과정 업무 세부 분장안 공람 및 내부결재', owner: '최지은 교사', deadline: '2026-11-30' },
+          { task: '학교폭력 예방 및 해결 기여 교원 승진 가산점 대상자 심사기준 수립 건', owner: '이민우 교사', deadline: '2026-12-10' }
+        ];
+      });
 
       // Output & Refinement States
       const [generatedMinutes, setGeneratedMinutes] = useState('');
@@ -739,6 +758,50 @@
         }
       };
 
+      const saveAgendasToLocal = () => {
+        try {
+          localStorage.setItem(`local_minutes_${activeTemplate}_agendas_saved`, 'true');
+          localStorage.setItem(`local_minutes_${activeTemplate}_agendas`, JSON.stringify(agendas));
+          localStorage.setItem(`local_minutes_${activeTemplate}_decisions`, JSON.stringify(decisions));
+          localStorage.setItem(`local_minutes_${activeTemplate}_is_action_na`, isActionNA ? 'true' : 'false');
+          localStorage.setItem(`local_minutes_${activeTemplate}_future_actions`, JSON.stringify(futureActions));
+
+          setIsAgendasRemembered(true);
+          showToastMsg('안건 및 결정사항이 PC(로컬 저장소)에 안전하게 저장되었습니다.', 'success');
+        } catch (e) {
+          showToastMsg('안건/결정사항 저장에 실패했습니다.', 'error');
+        }
+      };
+
+      const clearAgendasFromLocal = () => {
+        try {
+          localStorage.removeItem(`local_minutes_${activeTemplate}_agendas_saved`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_agendas`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_decisions`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_is_action_na`);
+          localStorage.removeItem(`local_minutes_${activeTemplate}_future_actions`);
+
+          const t = MEETING_TEMPLATES[activeTemplate];
+          if (t) {
+            setAgendas(t.agendas);
+            const mappedDecisions = (t.decisions || []).map(dec => {
+              if (typeof dec === 'string') {
+                return { text: dec, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+              }
+              return dec;
+            });
+            setDecisions(mappedDecisions);
+            setIsActionNA(t.isActionNA || false);
+            setFutureActions(t.futureActions);
+          }
+
+          setIsAgendasRemembered(false);
+          showToastMsg('저장된 안건 및 결정사항이 PC에서 삭제되고 초기화되었습니다.', 'success');
+        } catch (e) {
+          showToastMsg('안건/결정사항 삭제에 실패했습니다.', 'error');
+        }
+      };
+
       const loadTemplate = (key) => {
         const t = MEETING_TEMPLATES[key];
         if (t) {
@@ -788,17 +851,32 @@
             setAttendeeSignatures(parseAttendeesToSignatures(t.attendees, t.chairperson));
           }
 
-          setAgendas(t.agendas);
-          const mappedDecisions = (t.decisions || []).map(dec => {
-            if (typeof dec === 'string') {
-              return { text: dec, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+          const hasAgendasSaved = safeGetLocalItem(`local_minutes_${key}_agendas_saved`) === 'true';
+          setIsAgendasRemembered(hasAgendasSaved);
+
+          if (hasAgendasSaved) {
+            try {
+              setAgendas(JSON.parse(safeGetLocalItem(`local_minutes_${key}_agendas`)) || t.agendas);
+              setDecisions(JSON.parse(safeGetLocalItem(`local_minutes_${key}_decisions`)) || t.decisions);
+              setIsActionNA(safeGetLocalItem(`local_minutes_${key}_is_action_na`) === 'true');
+              setFutureActions(JSON.parse(safeGetLocalItem(`local_minutes_${key}_future_actions`)) || t.futureActions);
+            } catch (err) {
+              console.error(err);
             }
-            return dec;
-          });
-          setDecisions(mappedDecisions);
+          } else {
+            setAgendas(t.agendas);
+            const mappedDecisions = (t.decisions || []).map(dec => {
+              if (typeof dec === 'string') {
+                return { text: dec, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+              }
+              return dec;
+            });
+            setDecisions(mappedDecisions);
+            setIsActionNA(t.isActionNA || false);
+            setFutureActions(t.futureActions);
+          }
+
           setWritingMethod(t.writingMethod);
-          setIsActionNA(t.isActionNA || false);
-          setFutureActions(t.futureActions);
           setRawTranscript(t.rawTranscript);
           setGeneratedMinutes('');
           setErrorMessage('');
@@ -1370,6 +1448,19 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                 {/* TAB 2: AGENDAS & DECISIONS */}
                 {activeTab === 'agendas' && (
                   <div className="space-y-6">
+                    {/* Save/Clear Button Row at the Top */}
+                    <div className="flex gap-2 pb-3.5 border-b border-slate-100 justify-end">
+                      {isAgendasRemembered ? (
+                        <button onClick={clearAgendasFromLocal} className="px-3.5 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 border border-rose-200">
+                          안건/결정사항 지우기
+                        </button>
+                      ) : (
+                        <button onClick={saveAgendasToLocal} className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 border border-indigo-200/40">
+                          안건/결정사항 기억하기
+                        </button>
+                      )}
+                    </div>
+
                     {/* Agendas list */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
@@ -1594,6 +1685,8 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                         </div>
                       )}
                     </div>
+
+
                   </div>
                 )}
 
