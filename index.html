@@ -237,7 +237,7 @@
           "병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의",
           "학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정"
         ],
-        writingMethod: "conversational",
+        writingMethod: "agendaNarrative",
         isActionNA: false,
         futureActions: [
           { task: "우선 배정 대상자 서류 취합 및 희망원 접수 안내", owner: "정선아 교사", deadline: "2026-12-05" },
@@ -279,7 +279,7 @@
           "늘봄학교 특기적성 4개 부서(뉴스포츠, 창의로봇, 우쿠렐레, 드로잉교실) 개설 승인 및 강사비 예산 400만 원 지원 결정",
           "감염병 유행 대비 및 학습권 보장을 위해 연간 교외체험학습 승인 일수가 기존 20일에서 30일로 명문화 개정"
         ],
-        writingMethod: "speakerSummary",
+        writingMethod: "agendaNarrative",
         isActionNA: false,
         futureActions: [
           { task: "2학기 과정중심평가 교과별 계획서 나이스(NEIS) 등록 및 학부모 공고", owner: "이수진 교사", deadline: "2026-09-15" },
@@ -460,7 +460,8 @@
 
       // Configuration states
       const [showConfigModal, setShowConfigModal] = useState(false);
-      const [userGeminiApiKey, setUserGeminiApiKey] = useState(() => safeGetLocalItem('custom_gemini_api_key') || 'AQ.Ab8RN6K_pgy8uFPGXx02ousFl1haor4KYgoRkDE3_Wxqutr86A');
+      const [userGeminiApiKey, setUserGeminiApiKey] = useState(() => safeGetLocalItem('custom_gemini_api_key'));
+      const [customWorkerUrl, setCustomWorkerUrl] = useState(() => safeGetLocalItem('custom_gemini_worker_url') || 'https://lively-sea-7f64.letter0033.workers.dev');
       const [customFbConfigString, setCustomFbConfigString] = useState(() => safeGetLocalItem('custom_minutes_firebase_config'));
 
       // Toast State
@@ -485,7 +486,7 @@
       const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_external_attendees`) || '이영희(학교운영위원장), 박진아(학부모회장)');
       const [department, setDepartment] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_department`) || '교무기획부');
       const [meetingType, setMeetingType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_type`) || '임시');
-      const [writingMethod, setWritingMethod] = useState('conversational');
+      const [writingMethod, setWritingMethod] = useState('agendaNarrative');
       const [rawTranscript, setRawTranscript] = useState('');
       const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_written_date`) || getCurrentDateString());
       const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_order`) || '개회-경과보고-안건 심의 및 토론-폐회');
@@ -950,15 +951,20 @@
         setIsGenerating(true);
         setErrorMessage('');
 
-        let activeApiKey = userGeminiApiKey.trim() || 'AQ.Ab8RN6K_pgy8uFPGXx02ousFl1haor4KYgoRkDE3_Wxqutr86A';
-        if (!activeApiKey) {
-          setErrorMessage("API 키가 설정되지 않았습니다. 상단 우측의 설정(톱니바퀴) 아이콘을 눌러 Gemini API 키를 입력해 주세요.");
-          showToastMsg('API 키 누락', 'error');
+        let url = "";
+        const workerUrl = customWorkerUrl.trim();
+        const activeApiKey = userGeminiApiKey.trim();
+
+        if (workerUrl) {
+          url = workerUrl.startsWith('http') ? workerUrl : `https://${workerUrl}`;
+        } else if (activeApiKey) {
+          url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
+        } else {
+          setErrorMessage("API 키 또는 우회 Worker URL이 설정되지 않았습니다. 설정(톱니바퀴) 아이콘을 눌러 입력해 주세요.");
+          showToastMsg('설정 누락', 'error');
           setIsGenerating(false);
           return;
         }
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
 
         const systemPrompt = `당신은 대한민국 국가기록원 표준(NAK 1:2025) 및 공공기록물 관리에 관한 법률 시행령에 철저히 입각한 전문 아키비스트이자 회의록 생성 봇입니다. 
 주어진 회의 메타데이터와 날것의 발언 녹취록을 토대로, 완벽하고 공정하며 공적인 언어를 사용하여 고품질의 완성도 높은 '회의 기록(회의록)' 내용을 작성하십시오.
@@ -1081,14 +1087,19 @@ ${rawTranscript || (audioFile ? "오디오 파일이 함께 제공되었습니�
         setIsGenerating(true);
         setErrorMessage('');
 
-        let activeApiKey = userGeminiApiKey.trim() || 'AQ.Ab8RN6K_pgy8uFPGXx02ousFl1haor4KYgoRkDE3_Wxqutr86A';
-        if (!activeApiKey) {
-          setErrorMessage("Gemini API 키가 없습니다. 설정에서 입력해 주세요.");
+        let url = "";
+        const workerUrl = customWorkerUrl.trim();
+        const activeApiKey = userGeminiApiKey.trim();
+
+        if (workerUrl) {
+          url = workerUrl.startsWith('http') ? workerUrl : `https://${workerUrl}`;
+        } else if (activeApiKey) {
+          url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
+        } else {
+          setErrorMessage("Gemini API 키 또는 우회 Worker URL이 없습니다. 설정에서 입력해 주세요.");
           setIsGenerating(false);
           return;
         }
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
 
         const systemPrompt = `당신은 문서 전문 교정 에디터입니다. 사용자가 기존에 작성된 회의록 초안에 대해 추가적인 수정 및 밀착 조정을 요구했습니다. 
 요구사항을 정밀하게 반영하여 기존 회의록 텍스트를 대폭 정교화하고 교정하여 개선된 최종 마크다운 회의록 텍스트만을 그대로 반환하십시오. 절대 중간 설명이나 인삿말을 덧붙이지 마십시오.
@@ -1245,6 +1256,7 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
       const saveCustomSettings = () => {
         try {
           localStorage.setItem('custom_gemini_api_key', userGeminiApiKey);
+          localStorage.setItem('custom_gemini_worker_url', customWorkerUrl);
           if (customFbConfigString.trim()) {
             localStorage.setItem('custom_minutes_firebase_config', customFbConfigString);
           } else {
@@ -1698,10 +1710,10 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                         <label className="block text-[10px] font-bold text-slate-400">회의록 작성 기법</label>
                         <div className="grid grid-cols-2 gap-2">
                           {[
-                            { id: 'conversational', label: '대화체 (전체 발언록)' },
+                            { id: 'agendaNarrative', label: '안건별 논의 서술형(권장)' },
+                            { id: 'decisionCentric', label: '결정사항 중심 기록형' },
                             { id: 'speakerSummary', label: '발언자별 핵심 요약형' },
-                            { id: 'agendaNarrative', label: '안건별 논의 서술형' },
-                            { id: 'decisionCentric', label: '결정사항 중심 기록형' }
+                            { id: 'conversational', label: '대화체(전체 발언록)' }
                           ].map(method => (
                             <button
                               key={method.id}
@@ -1797,7 +1809,7 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
 
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성일: 필수 기재사항은 아님. <span className="text-rose-600 font-extrabold">다만 학업성적관리위원회 회의록은 회의록 작성 후 위원 확인 필수임.</span></label>
+                        <label className="block text-[10px] font-bold text-slate-400">회의록 작성일: 필수 기재사항은 아님. <span className="block text-rose-600 font-extrabold mt-0.5">다만 학업성적관리위원회 회의록은 회의록 작성 후 위원 확인 필수임.</span></label>
                         <div className="flex items-center gap-1">
                           <input
                             type="checkbox"
@@ -1825,7 +1837,7 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
 
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식): 필수 기재사항은 아님. <span className="text-rose-600 font-extrabold">다만 학업성적관리위원회 회의록은 회의록 작성 후 위원 확인 필수임.</span></label>
+                        <label className="block text-[10px] font-bold text-slate-400">참석위원 서명/날인 목록 (성명(인) 형식): 필수 기재사항은 아님. <span className="block text-rose-600 font-extrabold mt-0.5">다만 학업성적관리위원회 회의록은 회의록 작성 후 위원 확인 필수임.</span></label>
                         <div className="flex items-center gap-1">
                           <input
                             type="checkbox"
@@ -2223,7 +2235,7 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                 <div className="space-y-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
-                      Gemini API Key <span className="text-rose-500 font-black">*</span>
+                      Gemini API Key (우회 시 비워둠)
                     </label>
                     <input
                       type="password"
@@ -2233,7 +2245,23 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                     />
                     <p className="text-[10px] text-slate-400 mt-1 leading-normal">
-                      ※ 입력하신 API Key는 로컬 브라우저 저장소(<code className="bg-slate-100 text-indigo-700 px-1 rounded">localStorage</code>)에만 안전하게 보관되며 외부 서버로 절대 전송되지 않습니다.
+                      ※ Cloudflare Worker 우회 주소를 사용하지 않는 경우에만 입력하십시오.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Cloudflare Worker 우회 주소 (선택)
+                    </label>
+                    <input
+                      type="text"
+                      value={customWorkerUrl}
+                      onChange={(e) => setCustomWorkerUrl(e.target.value)}
+                      placeholder="https://your-worker.your-subdomain.workers.dev"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1 leading-normal">
+                      ※ API Key를 브라우저에 직접 입력하지 않고 Cloudflare Worker를 대리인으로 쓸 때 입력합니다.
                     </p>
                   </div>
 
