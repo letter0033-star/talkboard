@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 스마트 회의록 작성 프로그램</title>
+  <title>AI 스마트 회의록 작성기 (NAK 1:2025)</title>
   
   <!-- React & ReactDOM -->
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js" crossorigin></script>
@@ -461,7 +461,7 @@
       // Configuration states
       const [showConfigModal, setShowConfigModal] = useState(false);
       const [userGeminiApiKey, setUserGeminiApiKey] = useState(() => safeGetLocalItem('custom_gemini_api_key'));
-      const [customWorkerUrl, setCustomWorkerUrl] = useState(() => safeGetLocalItem('custom_gemini_worker_url') || 'https://lively-sea-7f64.letter0033.workers.dev');
+      const [customWorkerUrl, setCustomWorkerUrl] = useState(() => safeGetLocalItem('custom_gemini_worker_url') || 'https://script.google.com/macros/s/AKfycbzodL1_FtezMo5XoquMTwvcUPlRSxK5kbOUnPsLOU4uXUfQ3mFwQNNYUodk5ggJ0bkt5Q/exec');
       const [customFbConfigString, setCustomFbConfigString] = useState(() => safeGetLocalItem('custom_minutes_firebase_config'));
 
       // Toast State
@@ -1031,6 +1031,9 @@ ${rawTranscript || (audioFile ? "오디오 파일이 함께 제공되었습니�
           contents: [{ parts: requestParts }],
           systemInstruction: { parts: [{ text: systemPrompt }] }
         };
+        if (workerUrl) {
+          payload.apiKey = activeApiKey;
+        }
 
         const fetchWithRetry = async (targetUrl, options, retries = 5, delay = 1000) => {
           try {
@@ -1052,9 +1055,11 @@ ${rawTranscript || (audioFile ? "오디오 파일이 함께 제공되었습니�
         };
 
         try {
+          const isGas = url.includes("script.google.com");
+          const contentType = isGas ? "text/plain" : "application/json";
           const result = await fetchWithRetry(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": contentType },
             body: JSON.stringify(payload)
           });
           const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -1118,11 +1123,16 @@ ${generatedMinutes}
           contents: [{ parts: [{ text: userQuery }] }],
           systemInstruction: { parts: [{ text: systemPrompt }] }
         };
+        if (workerUrl) {
+          payload.apiKey = activeApiKey;
+        }
 
         try {
+          const isGas = url.includes("script.google.com");
+          const contentType = isGas ? "text/plain" : "application/json";
           const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": contentType },
             body: JSON.stringify(payload)
           });
           if (!response.ok) throw new Error(`HTTP ${response.status} 오류`);
@@ -2235,7 +2245,7 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                 <div className="space-y-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
-                      Gemini API Key (우회 시 비워둠)
+                      Gemini API Key (직접 호출 또는 Apps Script 사용 시 입력)
                     </label>
                     <input
                       type="password"
@@ -2245,23 +2255,23 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                     />
                     <p className="text-[10px] text-slate-400 mt-1 leading-normal">
-                      ※ Cloudflare Worker 우회 주소를 사용하지 않는 경우에만 입력하십시오.
+                      ※ 직접 API 호출이나 Google Apps Script 중계 서비스를 사용할 때 API 키를 입력하십시오.
                     </p>
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      Cloudflare Worker 우회 주소 (선택)
+                      API 우회 중계 주소 (Apps Script / Cloudflare Worker) (선택)
                     </label>
                     <input
                       type="text"
                       value={customWorkerUrl}
                       onChange={(e) => setCustomWorkerUrl(e.target.value)}
-                      placeholder="https://your-worker.your-subdomain.workers.dev"
+                      placeholder="https://script.google.com/macros/s/.../exec"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                     />
                     <p className="text-[10px] text-slate-400 mt-1 leading-normal">
-                      ※ API Key를 브라우저에 직접 입력하지 않고 Cloudflare Worker를 대리인으로 쓸 때 입력합니다.
+                      ※ Google Apps Script 웹앱 URL이나 Cloudflare Worker 주소를 입력하여 교육청 방화벽 차단을 우회합니다.
                     </p>
                   </div>
 
