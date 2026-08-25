@@ -217,13 +217,13 @@
         title: "인사자문위원회",
         orgType: "교육기관(초중고/대학)",
         orgName: "늘푸른초등학교",
-        chairperson: "교감 김지훈",
+        chairperson: "위원장 교감 김지훈",
         meetingName: "2026학년도 교원인사자문위원회 회의",
         meetingPurpose: "2026학년도 담임 및 부서 배정 우선 배정자 선정, 2027년 다면평가 기준안 수립, 기간제교원 학년 및 업무 조정 심의",
         dateTime: "2026년 11월 25일(수) 15:30",
         writtenDate: "2026년 11월 25일",
         location: "늘푸른초등학교 교무실",
-        attendees: "위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)",
+        attendees: "부위원장 교무부장 박소현, 위원 이민우, 위원 최지은, 위원 김태우, 위원 홍길동, 위원 이서연, 위원 박준영, 위원 최미경, 위원 윤동희, 간사 정선아",
         externalAttendees: "이영희(학교운영위원장), 박진아(학부모회장)",
         department: "교무기획부",
         meetingType: "임시",
@@ -265,7 +265,7 @@
         dateTime: "2026년 9월 8일(화) 16:00",
         writtenDate: "2026년 09월 08일",
         location: "미래초등학교 2층 회의실",
-        attendees: "교육과정부장 정민호, 평가계 이수진, 교사 강동우, 간사 김세영",
+        attendees: "교감 최성우, 교무부장 정민호, 부장교사 이수진, 부장교사 강동우, 부장교사 김세영(간사), 1학년부장 박소현, 2학년부장 이민우, 3학년부장 최지은, 4학년부장 김태우, 5학년부장 홍길동, 6학년부장 이서연, 전담교사 박준영, 전담교사 최미경, 전담교사 윤동희",
         externalAttendees: "장지현(학교운영위원회 학부모위원)",
         department: "교무기획부",
         meetingType: "정기",
@@ -307,7 +307,7 @@
         dateTime: "2026년 9월 10일(목) 15:30",
         writtenDate: "2026년 09월 10일",
         location: "늘푸른초등학교 교무실",
-        attendees: "교감 최성우, 이서연 교사, 박영수 행정실장, 간사 김세영",
+        attendees: "교감 최성우, 행정실장 박영수, 부장교사 김민우, 부장교사 이소현, 부장교사 정선아(간사), 담임교사 이서연, 담임교사 박준영, 담임교사 최미경, 전담교사 김태우, 전담교사 홍길동, 전담교사 윤동희",
         externalAttendees: "학부모회장 정진아",
         department: "교무기획부",
         meetingType: "임시",
@@ -362,17 +362,17 @@
     };
 
     const getSecretaryName = (text) => {
-      if (!text) return '정선아';
+      if (!text) return '';
       const parts = text.split(',');
       for (let part of parts) {
         let clean = part.trim();
         if (clean.includes('간사')) {
           clean = clean.replace(/\(.*?\)/g, '').trim();
           const tokens = clean.split(/\s+/);
-          return tokens[tokens.length - 1] || '정선아';
+          return tokens[tokens.length - 1] || '';
         }
       }
-      return '정선아';
+      return '';
     };
 
     const getChairpersonName = (text) => {
