@@ -473,21 +473,21 @@
       const [activeTemplate, setActiveTemplate] = useState(initialTemplate);
 
       // Core Form States
-      const [orgType, setOrgType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_org_type`) || '교육기관(초중고/대학)');
-      const [orgName, setOrgName] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_org_name`) || '늘푸른초등학교');
-      const [chairperson, setChairperson] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_chairperson`) || '교감 김지훈');
-      const [meetingName, setMeetingName] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_name`) || '제5차 교원인사자문위원회 회의');
-      const [meetingPurpose, setMeetingPurpose] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_purpose`) || '2026학년도 부서배정 및 신규임용 교사 업무분장, 학교폭력 유공교원 가산점 심사');
-      const [dateTime, setDateTime] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_date_time`) || getCurrentDateTimeString());
-      const [location, setLocation] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_location`) || '늘푸른초등학교 교무실');
-      const [attendees, setAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_attendees`) || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)');
-      const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_external_attendees`) || '이영희(학교운영위원장), 박진아(학부모회장)');
-      const [department, setDepartment] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_department`) || '교무기획부');
-      const [meetingType, setMeetingType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_type`) || '임시');
-      const [writingMethod, setWritingMethod] = useState('agendaNarrative');
-      const [rawTranscript, setRawTranscript] = useState('');
-      const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_written_date`) || getCurrentDateString());
-      const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_order`) || '개회-경과보고-안건 심의 및 토론-폐회');
+      const [orgType, setOrgType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_org_type`) || MEETING_TEMPLATES[initialTemplate].orgType);
+      const [orgName, setOrgName] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_org_name`) || MEETING_TEMPLATES[initialTemplate].orgName);
+      const [chairperson, setChairperson] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_chairperson`) || MEETING_TEMPLATES[initialTemplate].chairperson);
+      const [meetingName, setMeetingName] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_name`) || MEETING_TEMPLATES[initialTemplate].meetingName);
+      const [meetingPurpose, setMeetingPurpose] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_purpose`) || MEETING_TEMPLATES[initialTemplate].meetingPurpose);
+      const [dateTime, setDateTime] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_date_time`) || MEETING_TEMPLATES[initialTemplate].dateTime || getCurrentDateTimeString());
+      const [location, setLocation] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_location`) || MEETING_TEMPLATES[initialTemplate].location);
+      const [attendees, setAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_attendees`) || MEETING_TEMPLATES[initialTemplate].attendees);
+      const [externalAttendees, setExternalAttendees] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_external_attendees`) || MEETING_TEMPLATES[initialTemplate].externalAttendees || '');
+      const [department, setDepartment] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_department`) || MEETING_TEMPLATES[initialTemplate].department);
+      const [meetingType, setMeetingType] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_type`) || MEETING_TEMPLATES[initialTemplate].meetingType);
+      const [writingMethod, setWritingMethod] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_writing_method`) || MEETING_TEMPLATES[initialTemplate].writingMethod || 'agendaNarrative');
+      const [rawTranscript, setRawTranscript] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_raw_transcript`) || MEETING_TEMPLATES[initialTemplate].rawTranscript || '');
+      const [writtenDate, setWrittenDate] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_written_date`) || MEETING_TEMPLATES[initialTemplate].writtenDate || getCurrentDateString());
+      const [meetingOrder, setMeetingOrder] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_meeting_order`) || MEETING_TEMPLATES[initialTemplate].meetingOrder || '개회-경과보고-안건 심의 및 토론-폐회');
       const [audioFile, setAudioFile] = useState(null);
 
       // Attendee signatures states
@@ -496,8 +496,8 @@
       const [attendeeSignatures, setAttendeeSignatures] = useState(() => {
         const saved = safeGetLocalItem(`local_minutes_${initialTemplate}_attendee_signatures`);
         if (saved) return saved;
-        const defaultAttendees = safeGetLocalItem(`local_minutes_${initialTemplate}_attendees`) || '위원 박소현(부장), 이민우(교사), 최지은(유치원 교사), 정선아(간사), 김태우(교사), 홍길동(교사), 이서연(교사), 박준영(교사), 최미경(교사), 윤동희(교사)';
-        const defaultChair = safeGetLocalItem(`local_minutes_${initialTemplate}_chairperson`) || '교감 김지훈';
+        const defaultAttendees = MEETING_TEMPLATES[initialTemplate].attendees;
+        const defaultChair = MEETING_TEMPLATES[initialTemplate].chairperson;
         return parseAttendeesToSignatures(defaultAttendees, defaultChair);
       });
       const [isSignaturesAuto, setIsSignaturesAuto] = useState(() => {
@@ -515,11 +515,7 @@
         if (saved) {
           try { return JSON.parse(saved); } catch (e) {}
         }
-        return [
-          '2026학년도 학급 담임 및 부서 배정 우선 배정자 선정 건',
-          '병설유치원 시간제근무 기간제교사 및 교육공무직 업무 분배 조정 건',
-          '학교폭력 예방 및 해결 기여 교원 승진 가산점 대상자 심사기준 수립 건'
-        ];
+        return MEETING_TEMPLATES[initialTemplate].agendas;
       });
 
       const [decisions, setDecisions] = useState(() => {
@@ -527,11 +523,12 @@
         if (saved) {
           try { return JSON.parse(saved); } catch (e) {}
         }
-        return [
-          { text: '관내 전입 및 3년 이상 장기 근속 교사 대상 우선 선택권 보장 기준 확정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
-          { text: '병설유치원 최00 신규 교사에게 3세반 배정, 방과후 돌봄 관리는 김00 교육공무직원이 전담 담당하기로 합의', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 },
-          { text: '학교폭력 가산점 정성평가 비중을 40%에서 30%로 하향 조정하고 객관적 수치(피해학생 상담 횟수 등) 정량지표 강화 결정', votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 }
-        ];
+        return MEETING_TEMPLATES[initialTemplate].decisions.map(dec => {
+          if (typeof dec === 'string') {
+            return { text: dec, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+          }
+          return dec;
+        });
       });
 
       const [isActionNA, setIsActionNA] = useState(() => safeGetLocalItem(`local_minutes_${initialTemplate}_is_action_na`) === 'true');
@@ -540,11 +537,7 @@
         if (saved) {
           try { return JSON.parse(saved); } catch (e) {}
         }
-        return [
-          { task: '우선 배정 대상자 서류 취합 및 희망원 접수 안내', owner: '정선아 교사', deadline: '2026-12-05' },
-          { task: '유치원 방과후과정 업무 세부 분장안 공람 및 내부결재', owner: '최지은 교사', deadline: '2026-11-30' },
-          { task: '학교폭력 예방 및 해결 기여 교원 승진 가산점 대상자 심사기준 수립 건', owner: '이민우 교사', deadline: '2026-12-10' }
-        ];
+        return MEETING_TEMPLATES[initialTemplate].futureActions;
       });
 
       // Output & Refinement States
