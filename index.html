@@ -878,6 +878,109 @@
         }
       };
 
+      const handleResetAll = () => {
+        if (window.confirm("현재 작성 중인 모든 입력 내용을 완전히 삭제하고 초기화하시겠습니까?")) {
+          const keys = [
+            'org_type', 'org_name', 'chairperson', 'meeting_name', 'meeting_purpose', 
+            'date_time', 'location', 'attendees', 'external_attendees', 'department', 
+            'meeting_type', 'written_date', 'meeting_order', 'signatures_na', 
+            'attendee_signatures', 'signatures_auto', 'show_written_date', 
+            'saved', 'agendas_saved', 'agendas', 'decisions', 'is_action_na', 'future_actions'
+          ];
+          keys.forEach(k => {
+            localStorage.removeItem(`local_minutes_${activeTemplate}_${k}`);
+          });
+
+          setOrgType('');
+          setOrgName('');
+          setChairperson('');
+          setMeetingName('');
+          setMeetingPurpose('');
+          setDateTime('');
+          setLocation('');
+          setAttendees('');
+          setExternalAttendees('');
+          setDepartment('');
+          setMeetingType('');
+          setWritingMethod('agendaNarrative');
+          setRawTranscript('');
+          setWrittenDate('');
+          setMeetingOrder('');
+          setAudioFile(null);
+          setIsSignaturesNA(false);
+          setIsSignaturesAuto(true);
+          setShowWrittenDate(true);
+          setAttendeeSignatures('');
+          setIsRemembered(false);
+          setIsAgendasRemembered(false);
+          setAgendas([]);
+          setDecisions([]);
+          setIsActionNA(false);
+          setFutureActions([]);
+          setGeneratedMinutes('');
+          setErrorMessage('');
+          setChatLog([]);
+          
+          showToastMsg('전체 입력란이 깨끗하게 초기화되었습니다.', 'info');
+        }
+      };
+
+      const handleApplySample = () => {
+        if (window.confirm("현재 작성 중인 내용을 덮어쓰고, 원래의 기본 샘플 데이터로 복원하시겠습니까?")) {
+          const keys = [
+            'org_type', 'org_name', 'chairperson', 'meeting_name', 'meeting_purpose', 
+            'date_time', 'location', 'attendees', 'external_attendees', 'department', 
+            'meeting_type', 'written_date', 'meeting_order', 'signatures_na', 
+            'attendee_signatures', 'signatures_auto', 'show_written_date', 
+            'saved', 'agendas_saved', 'agendas', 'decisions', 'is_action_na', 'future_actions'
+          ];
+          keys.forEach(k => {
+            localStorage.removeItem(`local_minutes_${activeTemplate}_${k}`);
+          });
+
+          const t = MEETING_TEMPLATES[activeTemplate];
+          if (t) {
+            setOrgType(t.orgType);
+            setOrgName(t.orgName);
+            setChairperson(t.chairperson);
+            setAttendees(t.attendees);
+            setExternalAttendees(t.externalAttendees || "");
+            setMeetingName(t.meetingName);
+            setMeetingPurpose(t.meetingPurpose);
+            setDateTime(getCurrentDateTimeString());
+            setLocation(t.location);
+            setDepartment(t.department);
+            setMeetingType(t.meetingType);
+            setWrittenDate(getCurrentDateString());
+            setMeetingOrder(t.meetingOrder || '개회-경과보고-안건 심의 및 토론-폐회');
+            setIsSignaturesNA(false);
+            setIsSignaturesAuto(true);
+            setShowWrittenDate(true);
+            setAttendeeSignatures(parseAttendeesToSignatures(t.attendees, t.chairperson));
+            
+            setAgendas(t.agendas);
+            setDecisions((t.decisions || []).map(dec => {
+              if (typeof dec === 'string') {
+                return { text: dec, votingMethod: '구두합의', isUnanimous: true, yesCount: 0, noCount: 0, abstainCount: 0 };
+              }
+              return dec;
+            }));
+            setIsActionNA(t.isActionNA || false);
+            setFutureActions(t.futureActions);
+            
+            setWritingMethod(t.writingMethod || 'agendaNarrative');
+            setRawTranscript(t.rawTranscript || '');
+            setGeneratedMinutes('');
+            setErrorMessage('');
+            setChatLog([]);
+            
+            setIsRemembered(false);
+            setIsAgendasRemembered(false);
+          }
+          showToastMsg('기본 샘플 데이터가 성공적으로 복원되었습니다.', 'success');
+        }
+      };
+
       const handleAgendaChange = (index, value) => {
         const next = [...agendas];
         next[index] = value;
@@ -1298,6 +1401,16 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
             </div>
 
             <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+              {/* Reset & Apply Sample Buttons */}
+              <div className="flex items-center gap-1">
+                <button onClick={handleResetAll} className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 shadow-sm" title="작성 중인 모든 내용 지우기">
+                  초기화
+                </button>
+                <button onClick={handleApplySample} className="px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 shadow-sm" title="현재 템플릿의 원래 샘플로 복원">
+                  샘플적용
+                </button>
+              </div>
+
               <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200 shadow-inner">
                 <button onClick={() => loadTemplate('edu_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-indigo-700 bg-white border border-indigo-200/40 shadow-sm hover:bg-indigo-50">인사자문위원회</button>
                 <button onClick={() => loadTemplate('academic_committee')} className="px-2.5 py-1 text-[11px] font-bold rounded transition-all text-emerald-700 bg-white border border-emerald-200/40 shadow-sm hover:bg-emerald-50">교원협의회</button>
@@ -1316,6 +1429,18 @@ ${!isSignaturesNA ? '상기 기록이 틀림없음을 확인하며, 이에 서�
             {/* LEFT CONFIGURATION CONSOLE PANEL */}
             <aside className={`w-full lg:w-[40%] xl:w-[35%] border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto no-print pb-24 lg:pb-0 ${mobileTab === 'edit' ? 'flex' : 'hidden lg:flex'}`}>
               
+              {/* Active Template Title Banner */}
+              <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200 flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">현재 편집 중인 회의록</span>
+                <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md shadow-sm ${
+                  activeTemplate === 'edu_committee' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' :
+                  activeTemplate === 'academic_committee' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' :
+                  'bg-amber-50 text-amber-700 border border-amber-200/60'
+                }`}>
+                  {MEETING_TEMPLATES[activeTemplate]?.title || '회의록'}
+                </span>
+              </div>
+
               <div className="flex border-b border-slate-200 sticky top-0 bg-white z-10 shadow-sm">
                 {[
                   { id: 'basic', label: '1. 기본 정보' },
