@@ -459,7 +459,7 @@
       // Configuration states
       const [showConfigModal, setShowConfigModal] = useState(false);
       const [userGeminiApiKey, setUserGeminiApiKey] = useState(() => safeGetLocalItem('custom_gemini_api_key'));
-      const [customWorkerUrl, setCustomWorkerUrl] = useState(() => safeGetLocalItem('custom_gemini_worker_url') || 'https://script.google.com/macros/s/AKfycbzodL1_FtezMo5XoquMTwvcUPlRSxK5kbOUnPsLOU4uXUfQ3mFwQNNYUodk5ggJ0bkt5Q/exec');
+      const [customWorkerUrl, setCustomWorkerUrl] = useState(() => safeGetLocalItem('custom_gemini_worker_url') || 'https://script.google.com/macros/s/AKfycbx7vh7aeuI22VG4YrDn-PITC3Rj_XFlpMnIoBeUeYR1WN27chV_SSWkhZ2ExI_xqlkeew/exec');
       const [customFbConfigString, setCustomFbConfigString] = useState(() => safeGetLocalItem('custom_minutes_firebase_config'));
 
       // Toast State
@@ -1052,7 +1052,7 @@
         if (workerUrl) {
           url = workerUrl.startsWith('http') ? workerUrl : `https://${workerUrl}`;
         } else if (activeApiKey) {
-          url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
+          url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${activeApiKey}`;
         } else {
           setErrorMessage("API 키 또는 우회 Worker URL이 설정되지 않았습니다. 설정(톱니바퀴) 아이콘을 눌러 입력해 주세요.");
           showToastMsg('설정 누락', 'error');
@@ -1123,7 +1123,8 @@ ${rawTranscript || (audioFile ? "오디오 파일이 함께 제공되었습니�
 
         const payload = {
           contents: [{ parts: requestParts }],
-          systemInstruction: { parts: [{ text: systemPrompt }] }
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          model: "gemini-3.8-flash"
         };
         if (workerUrl) {
           payload.apiKey = activeApiKey;
@@ -1193,7 +1194,7 @@ ${rawTranscript || (audioFile ? "오디오 파일이 함께 제공되었습니�
         if (workerUrl) {
           url = workerUrl.startsWith('http') ? workerUrl : `https://${workerUrl}`;
         } else if (activeApiKey) {
-          url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
+          url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${activeApiKey}`;
         } else {
           setErrorMessage("Gemini API 키 또는 우회 Worker URL이 없습니다. 설정에서 입력해 주세요.");
           setIsGenerating(false);
@@ -1215,7 +1216,8 @@ ${generatedMinutes}
 
         const payload = {
           contents: [{ parts: [{ text: userQuery }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] }
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          model: "gemini-3.8-flash"
         };
         if (workerUrl) {
           payload.apiKey = activeApiKey;
